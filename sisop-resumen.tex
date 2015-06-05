@@ -1,0 +1,998 @@
+\documentclass{article}
+\usepackage[latin1]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\usepackage[pdftex]{graphicx}
+\usepackage[top=1.5in, bottom=1.5in, left=1in, right=1in]{geometry}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\usepackage{listings}
+\lstloadlanguages{C++}
+\lstnewenvironment{code}
+	{%\lstset{	numbers=none, frame=lines, basicstyle=\small\ttfamily, }%
+	 \csname lst@SetFirstLabel\endcsname}
+	{\csname lst@SaveFirstLabel\endcsname}
+\lstset{% general command to set parameter(s)
+	language=C++, basicstyle=\small\ttfamily, keywordstyle=\slshape,
+	basewidth={0.47em,0.40em},
+	columns=fixed, fontadjust, resetmargins, xrightmargin=5pt, xleftmargin=15pt,
+	flexiblecolumns=false, tabsize=2, breaklines,	breakatwhitespace=false, extendedchars=true,
+	numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=9pt,
+	frame=l, framesep=3pt,
+}
+
+\begin{document}
+
+\pagenumbering{Alph} %linea dummy solo para evitarme un warning
+\begin{titlepage}
+\begin{center}
+
+\includegraphics[width=0.35\textwidth]{logo_uba}\\[1cm]
+
+\textsc{\LARGE Departamento de Computaci\'on}\\[1.5cm]
+
+\textsc{\Large Facultad de Ciencias Exactas y Naturales}\\[0.5cm]
+\textsc{\Large Universidad de Buenos Aires}\\[0.5cm]
+
+% Title
+\HRule \\[0.4cm]
+{ \huge \bfseries Sistemas Operativos \\[0.4cm] }
+
+\HRule \\[1.5cm]
+
+% Author
+\emph{Autor:}\\
+Leopoldo \textsc{Taravilse}
+
+\vfill
+
+% Bottom of the page
+{\large \today}
+
+\end{center}
+\end{titlepage}
+\pagenumbering{arabic}
+\tableofcontents
+\newpage
+\section{Procesos}
+
+\subsection{¿Qu\'e es un proceso?}
+
+Un proceso es un programa en ejecuci\'on. El proceso incluye no s\'olo el c\'odigo del programa sino tambi\'en el estado de los registros, la memoria que utiliza el proceso y todos los dem\'as recursos que utiliza durante su ejecuci\'on.
+
+Un proceso tiene cinco posibles estados:
+\begin{itemize}
+\item New: El estado del proceso mientras est\'a siendo creado.
+\item Ready: El estado del proceso que est\'a listo para correr y a la espera de un procesador para correr.
+\item Running: El estado del proceso que est\'a actualmente corriendo. Puede haber s\'olo un proceso en estado running al mismo tiempo.
+\item Waiting: El estado del proceso cuando est\'a esperando un evento como puede ser entrada/salida.
+\item Terminated: El estado del proceso cuando ya finaliz\'o su ejecuci\'on.
+\end{itemize}
+
+Todos los procesos est\'an representados en el sistema operativos por su \textbf{Process Control Block (PCB)}. La PCB almacena entre otras cosas
+\begin{itemize}
+\item El estado del proceso.
+\item El Program Counter asociado a ese proceso, que indica cu\'al es la pr\'oxima instrucci\'on a ejecutar.
+\item El estado de los registros de la CPU asociados al proceso.
+\item Informaci\'on sobre la memoria asociada al proceso.
+\item Informaci\'on de entrada/salida. Esto incluye por ejemplo la lista de archivos abiertos o de dispositivos de entrada/salida con los que interactua el proceso.
+\end{itemize}
+
+Cada proceso es un\'ivocamente identificado por su \textbf{pid (process id)}.
+
+Cuando un proceso que est\'a ejecutandose en una CPU es desalojado de la misma para dar lugar a que se ejecute otro proceso, se produce lo que se conoce como cambio de contexto. El cambio de contexto consiste, entre otras cosas, en guardar la informaci\'on del proceso saliente en su PCB, y cargar la del proceso entrante desde su PCB. El cambio de contexto siempre consume tiempo del procesador en el cu\'al nada util ocurre en ning\'un proceso, y por lo tanto es deseable que ocurra suficientemente poco, para no desperdiciar tanto tiempo, pero a su vez, suficientemente seguido, como para que ning\'un proceso se apropie de la CPU por mucho tiempo.
+
+\subsection{Creando procesos}
+
+Un proceso puede crear otros procesos. Si un proceso $A$ crea un proceso $B$ decimos que $A$ es el proceso padre, y $B$ es el proceso hijo.
+
+En Linux para crear un proceso, el proceso padre debe llamar a la funci\'on $fork$, que es una system call. Luego de que la instrucci\'on $fork$ es ejecutada, dos procesos pasan a existir en lugar de uno. La forma de reconocer cu\'al es el proceso padre y cu\'al es el proceso hijo es mediante el valor de retorno de $fork$. Si al ejecutarse $fork$ retorna 0, eso quiere decir que el proceso es el hijo, si en cambio retorna un valor distinto de cero, el proceso es el padre y el valor de retorno es el pid del proceso hijo que se acaba de crear.
+
+Cuando un proceso es creado, no necesariamente tiene que seguir ejecutando el c\'odigo del proceso padre. La funci\'on $exec$ (que tambi\'en es una system call), permite a un proceso (generalmente es el hijo quien la invoca) cambiar su c\'odigo por el de otro programa. Esto permite que un proceso cree otro proceso, para que ejecute el c\'odigo de otro programa.
+
+Tambi\'en existe la system call $wait$, que le permite a un padre esperar a que termine la ejecuci\'on de su proceso hijo. Si el padre tuviese m\'as de un hijo, y se quisiera esperar a que terminen todos ellos, deber\'ia hacerse un $wait$ por cada uno de sus hijos.
+
+Para terminar un proceso, existe la system call $exit$, que le indica a su padre que el proceso hijo ya ha finalizado su ejecuci\'on.
+
+\subsection{Comunicaci\'on entre procesos}
+
+En muchos casos es deseable que los procesos puedan comunicarse entre s\'i. Vamos a ver dos formas de comunicaci\'on entre procesos. Una de estas formas es mediante memoria compartida, mientras que la otra es el intercambio de mensajes entre procesos.
+
+Para que los procesos se comuniquen mediante el uso de memoria compartida, estos deben avisarle al sistema operativo que compartir\'an parte de la memoria, ya que por defecto ning\'un proceso puede acceder a memoria que pertenece a otro proceso. Una vez que esto sucede, ambos procesos pueden leer y escribir en una misma regi\'on de la memoria, permitiendo que cada proceso pueda leer lo que el otro escribi\'o.
+
+En Linux un espacio de memoria compartida se reserva mediante la system call $shmget$, mientras que se accede con la system call $shmat$. Para dejar de utilizar el espacio de memoria compartida se debe llamar a la system call $shmdt$ mientras que para liberar la memoria se utiliza la system call $shmctl$.
+
+Para comunicar dos procesos mediante el intercambio de mensajes, se debe establecer una conexi\'on que permita dos operaciones b\'asicas: send y recieve. Existen a su vez dos tipos de send y dos tipos de receive: bloqueante y no bloqueante. Un send bloqueante espera a que la otra parte reciba el mensaje, mientras que un receive bloqueante espera a que la otra parte reciba el mensaje. En el caso del send y el receive no bloqueantes, simplemente hacen su tarea (enviar o recibir un mensaje) y el proceso sigue con su ejecuci\'on normalmente sin esperar nada del otro lado.
+
+La implementaci\'on de Unix (y por lo tanto de Linux) del intercambio de mensajes es mediante sockets. Los sockets se pueden ver como extremos en una comunicaci\'on. Una vez creados los sockets, se puede escribir y leer como si fuesen un dispositivo de entrada/salida.
+
+\section{Threads}
+
+\subsection{¿Qu\'e es un thread?}
+
+Hasta ahora estudiamos a los procesos como un \'unico hilo de ejecuci\'on que se ejecuta en una CPU. Los threads nos permiten separar los procesos en varios hilos de ejecuci\'on que pueden correr en simultaneo en distintas CPUs. Un thread es una unidad b\'asica de ejecuci\'on que tiene su propio \textbf{tid (thread id)}, que sirve para identificarlo de la misma manera que el pid identifica a un proceso, su propio estado del set de registros de la CPU, y su propia \'area de stack en memoria. Todos los dem\'as recursos como lo son por ejemplo la secci\'on de c\'odigo o datos en memoria, los archivos abiertos, o los dispositivos de entrada/salida con los que se comunica el thread, con compartidos con todos los threads del mismo proceso.
+
+Algunas de las ventajas del uso de threads son
+
+\begin{itemize}
+\item Cuando un proceso con un s\'olo thread est\'a a la espera de una operaci\'on bloqueante como puede ser la comunicaci\'on con un dispositivo de entrada/salida, un proceso con muchos threads puede tener un s\'olo thread bloqueado mientras que los dem\'as threads siguen ejecutandose sin tener que esperar.
+\item Los threads de un mismo proceso comparten su memoria, por lo que es muy \'util crear threads en lugar de procesos cuando se quiere compartir memoria y c\'odigo.
+\item Mientras que crear un proceso es muy costoso en t\'erminos de eficiencia, crear un thread es mucho m\'as econ\'omico, entre otras cosas porque no se tiene que reservar memoria o crear una PCB.
+\item En arquitecturas con m\'ultiples procesadores el uso de threads permite la ejecuci\'on de un proceso en m\'as de una CPU, permitiendo as\'i que al correr distintos threads del mismo proceso en distintas CPUs, el proceso se ejecute m\'as r\'apido que un proceso monothread.
+\end{itemize}
+
+\subsection{Pthreads}
+
+El standard de threads de POSIX, conocido como pthreads, define una API a la que se deben adaptarlas implementaciones de threads para sistemas operativos basados en Unix. El tipo de datos que se utiliza para crear threads es $pthread\_t$ y la forma decrear un thread es con la funci\'on $pthread\_create(\&tid,\&attr,startfn,args)$ siendo $tid$ una variable de tipo $pthread\_t$, $attr$ los atributos (en el scope de la materia los ignoramos y los seteamos siempre en NULL), $startfn$ la funci\'on donde empieza a correr el thread y $args$ un puntero a void que contiene los argumentos de la funci\'on. Adem\'as, la funci\'on $startfn$ debe ser de tipo puntero a void.
+
+Para esperar a que un thread termine su ejecuci\'on, tenemos la funci\'on $pthread\_join$, que toma como argumentos el tid del thread y el puntero a void donde queremos guardar el valor de retorno de la funci\'on $startfn$ (puede ser NULL si queremos ignorar este valor).
+
+Si bien los threads comparten la memoria del proceso al cual pertenecen, es posible reservar un \'area de memoria espec\'ifica para cada thread.
+
+\section{Scheduling}
+
+\subsection{Scheduling}
+
+Cuando m\'as de un proceso corre en simultaneo, es necesario decidir cu\'ando y cu\'anto tiempo corre cada proceso (o thread). Los algoritmos que determinan cu\'ando se desaloja un proceso o thread de una determinada CPU, dando lugar a otro proceso o thread para que corra se llaman algoritmos de scheduling. De ahora en m\'as hablaremos de scheduling de procesos, aunque todo lo que digamos es tambi\'en v\'alido para threads.
+
+Cuando una CPU se libera, es necesario decidir qu\'e proceso empieza a correr en esa CPU. Qu\'e proceso elegimos depende del algoritmo de scheduling.
+
+La pol\'itica de scheduling debe estar definida en funci\'on de optimizar alguna combinaci\'on de los siguientes objetivos (algunos de los cuales son contradictorios)
+
+\begin{itemize}
+\item Fairness (o ecuanimidad): que cada proceso reciba una dosis justa de CPU (para alguna noci\'on de justicia).
+\item Eficiencia: tratar de que la CPU est\'e ocupada la mayor cantida de tiempo posible.
+\item Carga del sistema: intentar minimizar la cantidad de procesos en estado ready.
+\item Tiempo de respuesta: intentar minimizar al tiempo de respuesta percibido por los usuarios interactivos.
+\item Latencia: tratar de minimizar el tiempo requerido para que un proceso empiece a dar resultados.
+\item Tiempo de ejecuci\'on: intentar minimizar el tiempo que le toma a cada proceso ejecutar completamente.
+\item Throughput (o rendimiento): tratar de maximizar la cantidad de procesos listos por unidad de tiempo.
+\item Liberaci\'on de recusos: tratar de que terminen cuanto antes los procesos que tienen reservados m\'as recursos.
+\end{itemize}
+
+Un scheduler puede ser \textbf{cooperativo (nonpreemptive)} o \textbf{con desalojo (preemptive)}. Si un scheduler es preemptive, adem\'as de decidir cu\'ando le toca ejecutar a un proceso, tambi\'en debe decidir cu\'ando ya no le toca ejecutar m\'as a un proceso que est\'a actualmente en ejecuci\'on.
+
+\subsection{Pol\'iticas de Scheduling}
+
+Existen varias pol\'iticas de scheduling que son muy conocidas. A continuaci\'on veremos algunas de ellas.
+
+\subsubsection{First Come First Serve (FCFS)}
+
+El scheduler First Come First Serve (FCFS) es el m\'as sencillo de todos, aunque sin embargo no es de los m\'as \'utiles. Este scheduler consiste en simplemente asignarle la CPU a los procesos en el orden en el que van llegando sin preemption.
+
+En un scheduler FCFS las tareas son desalojadas o bien porque termina su ejecuci\'on o bien porque solicitan entrada/salida. Podr\'ia pasarnos que una tarea que no solicita entrada salida llega primero y ejecuta por un tiempo muy largo, mientras que una segunda tarea tiene que esperar a que la primera termine para solicitar entrada/salida, dejando la CPU inutilizada una vez que esta segunda tarea es desalojada por el uso de entrada/salida.
+
+\subsubsection{Shortest Job First (SJF)}
+
+El scheduler Shortest Job First le asigna la CPU siempre al proceso cuyo tiempo de ejecuci\'on es menor. Esta pol\'itica es muy buena en muchos casos aunque imposible de llevar a la pr\'actica ya que es imposible saber cu\'anto tiempo va a llevarle a un determinado proceso ejecutar.
+
+Un scheduler SJF puede ser tanto preemptive como nonpreemptive. En el caso del scheduler SJF con preemption, cuando llega un proceso a la cola de procesos listos, s\'olo reemplaza al proceso actual si su tiempo de ejecuci\'on es menor al tiempo de ejecuci\'on restante del proceso actual.
+
+\subsubsection{Priority Scheduling}
+
+El caso de SJF es un caso de scheduler con prioridades. En un scheduler con prioridades se definen las prioridades de cada proceso y ejecuta el proceso con mayor prioridad en cada paso. En el caso de SJF la prioridad est\'a dada por el tiempo restante de ejecuci\'on de un proceso.
+
+Este tipo de schedulers puede dar lugar a lo que se conoce como \textbf{starvation (o inanici\'on)}, un escenario donde a un proceso nunca le es asignada una dosis de CPU. Una soluci\'on posible a este problema es ir reduciendo la prioridad de cada proceso a medida que va ejecutando, para que eventualmente todos los procesos terminen ejecutandose. Aunque esta soluci\'on es parcial, ya que podr\'ian llegar todo el tiempo procesos nuevos con alta prioridad y dejar sin ejecutar a un proceso de baja prioridad.
+
+\subsubsection{Round Robin}
+
+El scheduler Round Robin es parecido al FCFS pero con preemption. Se le agrega lo que se denomina \textbf{quantum}, que es una unidad de tiempo tras el cual el proceso que corre en una CPU es desalojado y es insertado al final de la cola de procesos ready. El quantum suele ser de entre 10 y 100 milisegundos.
+
+En un scheduler Round Robin, si el quantum es muy grande, va a parecerse mucho a un FCFS, en cambio si es muy chico, va a haber mucha p\'erdida de tiempo en los cambios de contexto, por lo cual es muy importante saber elegir el quantum apropiado.
+
+\subsubsection{Scheduling con m\'ultiples procesadores}
+
+En el caso de que haya m\'ultiples procesadores, es conveniente que un proceso ejecute siempre en el mismo procesador, para optimizar el uso de la cach\'e. Existen pol\'iticas de scheduling que respetan esto a rajatabla (siempre se utiliza el mismo procesador para un mismo proceso), donde se dice que hay afinidad dura, y pol\'iticas en las que se dice que hay una afinidad blanda, ya que no siempre un mismo proceso corre en un mismo procesador.
+
+\section{Sincronizaci\'on de procesos}
+
+\subsection{Condici\'on de carrera}
+
+Supongamos que dos procesos est\'an corriendo concurrentemente, y comparten memoria. Supongamos tambi\'en que, dada una variable $v$, los procesos quieren hacer $v++$ y $v--$ respectivamente. Las ejecuciones, vistas en operaciones at\'omicas del procesador, ser\'ian
+
+\begin{code}
+registro1 = v;
+registro1 = registro1+1;
+v = registro1;
+\end{code}
+
+\begin{code}
+registro2 = v;
+registro2 = registro2-1;
+v = registro2;
+\end{code}
+
+Debido a que los procesos no poseen el control sobre el scheduler, podr\'ia suceder que el orden en el que se ejecuten estas operaciones sea
+
+\begin{code}
+registro1 = v;
+registro2 = v;
+registro1 = registro1+1;
+v = registro1;
+registro2 = registro2-1;
+v = registro2;
+\end{code}
+
+Dando lugar a que si, por ejemplo, $v$ val\'ia 4 en un principio, pase a valer 3 en lugar de seguir valiendo 4 luego de ser incrementada y decrementada. A este problema se lo conoce como condici\'on de carrera.
+
+Esto puede ocurrir siempre que haya contenci\'on (varios procesos quieren acceder al mismo recurso) y concurrencia (dos o m\'as procesos se ejecutan en simultaneo, no necesariamente en paralelo).
+
+\subsection{Secci\'on cr\'itica}
+
+A veces un proceso tiene que ejecutar un bloque de c\'odigo que implica escribir parte de la memoria compartida o escribir un archivo. Esta parte del c\'odigo en la que el proceso no puede ejecutarse en simultaneo con otra parte de otro proceso que escriba las mismas variables o archivos se la conoce como secci\'on cr\'itica.
+
+Cuando m\'as de un proceso tiene la secci\'on cr\'itica, s\'olo uno a la vez puede acceder a la misma al mismo tiempo. La soluci\'on al problema de la secci\'on cr\'itica tiene tres requerimientos:
+
+\begin{itemize}
+\item Exclusi\'on mutua: Si un proceso entra a su secci\'on cr\'itica, ning\'un otro proceso puede estar en su secci\'on cr\'itica.
+\item Progreso: Si ning\'un proceso est\'a ejecutando su secci\'on cr\'itica y algunos procesos quieren entrar en su secci\'on cr\'itica, s\'olo uno puede hacerlo y la decisi\'on de qu\'e proceso entra en su secci\'on cr\'itica no puede ser postpuesta indefinidamente.
+\item Espera acotada: Existe un l\'imite de cu\'antas veces pueden entrar otros procesos a sus secciones cr\'iticas antes que un proceso pueda entrar a la suya una vez que el proceso pidi\'o entrar en su secci\'on cr\'itica.
+\end{itemize}
+
+\subsubsection{Soluci\'on de Peterson al problema de la secci\'on cr\'itica}
+
+Una posible soluci\'on al problema de la secci\'on cr\'itica cuando hay s\'olo dos procesos, es la soluci\'on de Peterson.
+
+Esta soluci\'on utiliza dos variables:
+
+\begin{code}
+int turn;
+bool flag[2];
+\end{code}
+
+$turn$ va a ser un entero que indique a qu\'e proceso le toca correr su secci\'on cr\'itica y flag es un flag que dice si el proceso est\'a listo para correr su secci\'on cr\'itica.
+
+La soluci\'on de Peterson para el proceso $i$ (0 o 1, $j = 1-i$) es la siguiente:
+
+\begin{code}
+do{
+    flag[i] = true;
+		turn = j;
+		while(flag[j] && turn == j);
+		//sección crítica
+		flag[i] = false;
+		//sección no crítica
+}while(true);
+\end{code}
+
+Lo que hace este c\'odigo b\'asicamente es lo siguiente: Antes de entrar a la secci\'on cr\'itica un proceso avisa que quiere entrar seteando su flag en tru, despu\'es le cede el turno al otro proceso, y si el otro proceso tiene su flag en true se queda esperando a que termine de correr su secci\'on cr\'itica. De esta manera podemos asegurar los tres requisitos de la soluci\'on de la secci\'on cr\'itica:
+
+\begin{itemize}
+\item Exclusi\'on mutua: No puede ser que dos procesos entren a la vez a la secci\'on cr\'itica. Si un proceso est\'a en su secci\'on cr\'itica tiene su flag en true, luego el otro proceso tiene que tener el turno para no entrar en el while, pero como el proceso $i$ est\'a en la secci\'on cr\'itica, cuando $j$ setea el turno en $i$ entra en el while hasta que $i$ libera el flag. Si los dos quisieran entrar a la vez, ambos flags estar\'ian prendidos y s\'olo uno de los dos procesos tendr\'ia su turno.
+\item Progreso: Uno de los dos procesos va a tener el turno en todo momento, luego si s\'olo uno quiere entrar a la secci\'on cr\'itica va a entrar porque el otro va a tener el flag apagado, y si los dos quieran entrar, el primero que le asigne el turno al otro, va a recuperar el turno cuando el otro proceso se lo asigne y va a entrar en la secci\'on cr\'itica, dejando al otro ciclar en el while.
+\item Espera acotada: Una vez que el proceso entra en el while, cuando el otro proceso libera el flag, ya puede entrar a la secci\'on cr\'itica, a\'un si el otro proceso vuelve a pedir la secci\'on cr\'itica ya que en ese caso le va a ceder el turno.
+\end{itemize}
+
+\subsubsection{Test and Set}
+
+Otra soluci\'on al problema de la secci\'on cr\'itica requiere un poco de ayuda del hardware. Si contamos con una instrucci\'on \textbf{TestAndSet} at\'omica que nos devuelva el valor que ten\'ia una variable booleana antes de ejecutar la instrucci\'on, y la setea en true, entonces podemos hacer uso de lo que se conoce como \textbf{locks}.
+
+La instrucci\'on TestAndSet debe hacer at\'omicamente (es decir, sin la posibilidad de ser interrumpida en el medio de la instrucci\'on) lo mismo que hace el siguiente c\'odigo
+
+\begin{code}
+bool TestAndSet(bool *var)
+{
+    bool res = *var;
+		*var = true;
+		return res;
+}
+\end{code}
+
+La soluci\'on implementando locks con TestAndSet ser\'ia la siguiente:
+
+\begin{code}
+bool lock // variable global compartida por todos los procesos
+while(true)
+{
+    while(TestAndSet(&lock));
+		//sección crítica
+		lock = false;
+		// sección no crítica
+}
+\end{code}
+
+Para evitar inanici\'on la variable $lock$ debe ser inicializada en false. Adem\'as, como TestAndSet es at\'omica, no puede haber condici\'on de carrera si se ejecutan dos TestAndSets en dos procesos separados ya que uno se ejecutar\'a primero y el otro despu\'es.
+
+En los casos de la soluci\'on de Peterson y de la implementaci\'on de locks con TestAndSet, estamos haciendo un while que cicla permanentemente hasta que le toca el turno al proceso de correr su secci\'on cr\'itica. Esto se llama \textbf{busy waiting} y es una \textbf{MUY MALA IDEA} ya que consumimos mucho tiempo de la CPU ejecutando el while cuando tranquilamente podr\'iamos poner un sleep en el cuerpo del while. Aunque tambi\'en debemos ser cuidadosos, si el sleep es por un tiempo muy grande podemos perder eficiencia, y si es por un tiempo muy chico tambi\'en estamos desperdiciando tiempo del procesador como en el caso de busy waiting.
+
+\subsection{Sem\'aforos}
+
+Ser\'ia de mucha utilidad tener la posibilidad de tener una variable $lock$ y pedirle al procesador que continue con la secci\'on cr\'itica s\'olo cuando esta tome un determinado valor. Afortunadamente, no somos los primeros a los que se nos ocurre esta idea, sino que ya \textbf{Dijkstra} (si, en negrita porque es Dijkstra) pens\'o en este problema e implement\'o una soluci\'on que conocemos como \textbf{sem\'aforos}.
+
+Un sem\'aforo es una variable entera, que toma valores no negativos, que es inicializada con un valor elegido por el programador, y que luego de ser inicializada s\'olo puede ser accedida mediante dos funciones: \textbf{wait} y \textbf{signal}. Estas funciones son operaciones at\'omicas y su ejecuci\'on es similar a la de los siguientes c\'odigos:
+
+\begin{code}
+wait(S)
+{
+    while(S<=0);
+		S--;
+}
+\end{code}
+
+\begin{code}
+signal(S)
+{
+    S++;
+}
+\end{code}
+
+Existen dos tipos distintos de sem\'aforos. Uno de ellos son los sem\'aforos que pueden tomar cualquier valor no negativo, mientras que los otros s\'olo pueden tomar dos valores: 0 y 1. Estos \'ultimos son conocidos como sem\'aforos binarios o \textbf{mutex}.
+
+Los mutex pueden ser utilizados por ejemplo para resolver el problema de la secci\'on cr\'itica. Cuando el mutex tiene el valor 1 y un proceso hace un wait, dejandolo en 0, se dice que el proceso toma el mutex. Al hacer un signal de un mutex que est\'a en 0, se dice que el proceso libera el mutex. Para resolver el problema de la secci\'on cr\'itica es necesario tener un mutex inicializado en 1, luego cada proceso que quiere entrar en su secci\'on cr\'itica debe tomar el mutex para entrar, y liberarlo al salir de la secci\'on cr\'itica. De este modo, no puede haber m\'as de un proceso a la vez en la secci\'on cr\'itica.
+
+Para evitar el busy waiting, los sem\'aforos se implementan de la siguiente manera: Adem\'as del valor del sem\'aforo, se guarda una lista de procesos en espera. Cada vez que un proceso hace un wait, si tiene que esperar a que el valor del sem\'aforo sea mayor a cero, libera la CPU en la que est\'a corriendo, pasando a la lista de espera asociada al sem\'aforo que pidi\'o. Este proceso no es agregado a la cola de procesos ready sino que, al hacer un signal, el primer proceso en la lista de espera (que funciona como una cola), es pasado a la cola de procesos ready. De esta manera la implementaci\'on de los sem\'aforos ser\'ia la siguiente:
+
+\begin{code}
+struct semaphore{
+    int value;
+		process *list;
+};
+\end{code}
+
+\begin{code}
+wait(semaphore *S)
+{
+    S->value--;
+		if(S->value<0)
+		{
+		    S->list.add(thisProcess);
+				block();
+		}
+}
+\end{code}
+
+\begin{code}
+signal(semaphore *S)
+{
+    S->value++;
+		if(S->value<=0)
+		{
+		    remove process P from S->list;
+				wakeUp(P);
+		}
+}
+\end{code}
+
+Con esta implementaci\'on de sem\'aforos, los valores que toman los mismos pueden ser negativos y se usa este valor, cuando es negativo, para poder determinar cu\'antos procesos hay en lista de espera. La funci\'on $block$ bloquea el proceso actual (sacandolo de la CPU donde est\'a corriendo sin encolarlo en la cola de procesos ready) mientras que la funci\'on $wakeUp(P)$ encola el proceso $P$ en la cola de procesos ready. Ambas operaciones ($block$ y $wakeUp$) son system calls provistas por el sistema operativo.
+
+La cola de procesos en espera por un sem\'aforo no es necesariamente una cola FIFO, sino que puede ser una cola de prioridades o cualquier otro tipo de cola (al igual que las colas de procesos listos para ser cargados en una CPU por el scheduler). Es importante notar que si bien podemos usar cualquier tipo de cola (por ejemplo, una cola LIFO), seg\'un la estrategia que utilizemos para encolar y desencolar podr\'iamos generar inanici\'on.
+
+Un uso muy com\'un de los sem\'aforos es cuando hay $N$ copias de un recurso dado $R$. En este caso un sem\'aforo se inicializa en $N$, y cada vez que un proceso quiere hacer uso de una copia del recurso $R$ pide el sem\'aforo, liberandolo luego de utilizar el recurso.
+
+Un problema muy com\'un en el uso de sem\'aforos, el cu\'al abordaremos m\'as en detalle en la pr\'oxima secci\'on, es cuando hay un conjunto de procesos que est\'a esperando eventos que s\'olo pueden ocurrir en otro proceso de ese mismo conjunto. Por ejemplo, dos procesos $A$ y $B$, ambos est\'an trabados en un wait y cada uno est\'a esperando el signal del otro proceso, como se ve en el c\'odigo a continuaci\'on:
+
+\begin{code}
+A()
+{
+    semB.wait();
+		semA.signal();
+}
+\end{code}
+
+\begin{code}
+B()
+{
+    semA.wait();
+		semB.signal();
+}
+\end{code}
+
+En este caso, $A$ se queda esperando que $B$ libere su sem\'aforo, sin liberar el propio, mientras que $B$ espera que $A$ libere el suyo, sin liberar el sem\'aforo que $A$ est\'a pidiendo. En este caso los dos procesos se van a quedar trabados indefinidamente ya que nadie les va a liberar los sem\'aforos que est\'an pidiendo. Este problema se conoce como \textbf{deadlock}.
+
+Veamos algunos ejemplos de problemas que pueden ser resueltos con sem\'aforos, y sus respectivas soluciones.
+
+\subsubsection{Rendezvous}
+
+Supongamos que tenemos los procesos $A$ y $B$ que quieren ejecutar dos instrucciones cada uno, y queremos que ninguno de los dos ejecute su segunda instrucci\'on antes de que el otro haya ejecutado su primer instrucci\'on, sin poner restricciones sobre el orden en el que ejecuta cada uno su primer instrucci\'on, ni tampoco la segunda. Este problema se conoce como rendezvous y su soluci\'on con sem\'aforos es la siguiente:
+
+\begin{code}
+A()
+{
+    a1;
+		semA.signal();
+		semB.wait();
+		a2;
+}
+B()
+{
+    b1;
+		semB.signal();
+		semB.wait();
+		b2;
+}
+\end{code}
+
+Donde $a1$ y $a2$ son las instrucciones del proceso $A$, $b1$ y $b2$ son las instrucciones del proceso $B$, y $semA$ y $semB$ son dos sem\'aforos que empiezan inicializados en cero.
+
+\subsubsection{Barrera}
+
+Supongamos ahora que tenemos una situaci\'on an\'aloga a la del rendezvous, pero con $N > 2$ procesos en lugar de 2. La soluci\'on a este problema se conoce como barrera y su implementaci\'on es la siguiente:
+
+\begin{code}
+P()
+{
+    //instrucciones previas al rendezvous
+    mutex.wait();
+		    count++;
+				if(count==n)
+				    barrier.signal();
+		mutex.signal();
+		barrier.wait();
+		barrier.signal();
+		//instrucciones posteriores al rendezvous
+}
+\end{code}
+
+Este ser\'ia el c\'odigo de cada uno de los procesos que necesitan esperar a los otros procesos para seguir con su ejecuci\'on. En este caso $count$ es una variable que cuenta cu\'antos procesos llegaron al punto del rendezvous, y empieza inicializada en cero, $barrier$ es un sem\'aforo que empieza inicializado en cero (la barrera), y $mutex$ es un mutex que proteje la variable $count$ y que empieza inicializado en 1.
+
+El sem\'aforo al que se le hace un signal inmediatamente despu\'es de un wait se lo denomina turnstile (molinete en ingl\'es) ya que sirve para que los procesos vayan pasando de a uno por ese punto.
+
+\subsubsection{Barrera reutilizable}
+
+A veces queremos reutilizar una barrera, por ejemplo para que dentro de un loop cada ejecuci\'on del loop requiera que todos los procesos se encuentren en un punto, ejecuten su secci\'on cr\'itica, y luego sigan ejecutandose hasta la pr\'oxima ejecuci\'on del loop en la que nuevamente necesitamos de la barrera. Veamos una soluci\'on a este problema:
+
+\begin{code}
+P()
+{
+    while(condicion)
+		{
+		    //instrucciones previas a la sección crítica
+		    mutex.wait();
+				    count++;
+						if(count==n)
+						{
+						    turnstile2.wait();
+								turnstile.signal();
+						}
+				mutex.signal();
+				turnstile.wait();
+				turnstile.signal();
+				//sección crítica
+				mutex.wait();
+				    count--;
+						if(count==0)
+						{
+						    turnstile.wait();
+								turnstile2.signal();
+						}
+				mutex.signal();
+				turnstile2.wait();
+				turnstile2.signal();
+				//instrucciones posteriores a la sección crítica
+		}
+}
+\end{code}
+
+En este caso $turnstile$ empieza inicializado en 0 mientras que $turnstile2$ empieza inicializado en 1.
+
+\subsubsection{Productor - Consumidor}
+
+Supongamos que tenemos dos procesos, uno que produce recursos y otro que los utiliza. Queremos que el productor vaya almacenando recursos en un buffer mientras que el consumidor retire recursos del buffer siempre que haya alg\'un recurso disponible en el buffer para utilizarlo. El acceso al buffer debe ser exclusivo, es decir, no pueden acceder el productor y el consumidor al mismo tiempo. Veamos una soluci\'on a este problema:
+
+\begin{code}
+producer()
+{
+    while(true)
+		{
+        resource = waitForResource();
+    		mutex.wait();
+		        buffer.add(resource);
+				    items.signal();
+	      mutex.signal();
+		}
+}
+consumer()
+{
+    while(true)
+		{
+		    items.wait();
+				mutex.wait();
+				    resource = buffer.get();
+			  mutex.signal();
+				resource.use();
+		}
+}
+\end{code}
+
+En este caso, $items$ es un sem\'aforo que indica la cantidad de items en el buffer, $mutex$ protege el buffer, y resource es una variable local tanto para el productor como para el consumidor. Esta soluci\'on funciona tambi\'en para m\'ultiples productores y m\'ultiples consumidores.
+
+\subsubsection{Read-Write Lock}
+
+Un problema de sincronizaci\'on muy com\'un aparece cuando tenemos varios procesos, algunos de los cuales quieren escribir una variable, y otros leerla. Puede haber varias lecturas en simultaneo, pero s\'olo una escritura a la vez, y nadie puede leer mientras alguien est\'a escribiendo. Una posible soluci\'on a este problema es la siguiente:
+
+\begin{code}
+writer()
+{
+    turnstile.wait();
+		    roomEmpty.wait();
+				//sección crítica
+		turnstile.signal();
+		roomEmpty.signal();
+}
+reader()
+{
+    turnstile.wait();
+		turnstile.signal();
+		mutex.wait();
+		    count++;
+				if(count==1)
+				    roomEmpty.wait();
+		mutex.signal();
+		//sección crítica
+		mutex.wait();
+		    count--;
+				if(count==0)
+				    roomEmpty.signal();
+	  mutex.signal();
+}
+\end{code}
+
+En este caso tanto $mutex$ como $roomEmpty$ (que tambi\'en es un mutex) empiezan inicializados en 1, al igual que $turnstile$. $count$ cuenta la cantidad de readers en la secci\'on cr\'itica y empieza inicializado en cero.
+
+\subsection{Monitores}
+
+Otra alternativa a los sem\'aforos son los monitores. Un monitor es un tipo de datos que contiene variables (normalmente son las variables que se desean proteger de accesos concurrentes) y metodos que operan sobre esas variables, as\'i como un metodo para inicializarlas. Los monitores tambi\'en tienen lo que se conoce como variables de condici\'on, que son parecidas a los sem\'aforos. Una variable de condici\'on tiene tambi\'en las operaciones at\'omicas signal y wait, pero con la diferencia de que s\'olo se puede despertar de un wait con un signal posterior al wait, y no guardan ning\'un valor. Esto es, si ocurre un signal mientras ning\'un proceso est\'a bloqueado por un wait, el signal es ignorado, mientras que si ocurre un signal cuando hay otro proceso esperando por un wait, entonces el proceso que est\'a trabado en wait tiene permiso para seguir ejecutandose.
+
+\section{Deadlock}
+
+\subsection{Condiciones de Coffman}
+
+Como vimos anteriormente, la situaci\'on en la que en un conjunto de dos o m\'as procesos est\'an todos esperando a que ocurra un evento que s\'olo puede desencadenar otro proceso de ese conjunto, se la conoce como deadlock. En esta secci\'on nos centraremos en el caso de deadlock de recursos (ya sea una variable en memoria, un archivo, una dispositivo de entrada/salida, etc.),  es decir, cuando un conjunto de procesos est\'a esperando a que se libere un recurso que tiene otro proceso de ese conjunto.
+
+S\'olo puede ocurrir deadlock cuando se cumplen las siguientes cuatro condiciones (notar que pueden cumplirse y a\'un as\'i no haber deadlock):
+
+\begin{itemize}
+\item Exclusi\'on mutua: Cada copia de cada recurso puede ser asignada a un s\'olo proceso en un mismo instante de tiempo.
+\item Hold and Wait: Los procesos que tienen recursos asignados pueden pedir m\'as recursos.
+\item No preemption: Nadie le puede quitar los recursos a un proceso, sino que los debe liberar por su cuenta.
+\item Espera circular: Hay dos o m\'as procesos, cada uno de los cuales est\'a esperando por un recurso que tiene el proceso siguiente.
+\end{itemize}
+
+\subsection{Algoritmos de prevenci\'on de deadlock}
+
+\subsubsection{Estados seguros}
+
+Un estado se dice seguro, si podemos enumerar los procesos que est\'an corriendo actualmente $P_1,P_2,\dots,P_n$ de modo tal de que $P_1$ tiene disponibles todos los recursos que necesita terminar, y para todo $i > 1$ se cumple que entre los recursos disponibles y los recursos que tienen tomados los procesos $P_1,\dots,P_{i-1}$ tiene todos los recursos que necesita para terminar.
+
+Un algoritmo de prevensi\'on de deadlock, que implica conocer cu\'antos recursos de cada tipo va a necesitar cada proceso de antemano, consiste en s\'olo asignar recursos a los procesos si la asignaci\'on lleva a un estado seguro.
+
+\subsubsection{Algoritmo del banquero}
+
+El algoritmo del banquero es uno de los algoritmos m\'as famosos de prevenci\'on de deadlock. Este algoritmo consiste en asegurarse, cada vez que entra un proceso, de preguntarle cu\'antos recursos de cada tipo va a necesitar como m\'aximo, y s\'olo darle lugar a que se ejecute si, asignandole la m\'axima cantidad de recursos que necesita, se llega a un estado seguro.
+
+\subsubsection{Deteci\'on de estados seguros}
+
+Hasta ahora venimos hablando de estados seguros pero no dijimos todav\'ia c\'omo determinar si un estado es seguro. Supongamos que tenemos $M$ recursos distintos, y $N$ procesos. Entonces el algoritmo, que tiene complejidad $O(MN^2)$, consiste en los siguiente pasos:
+
+\begin{enumerate}
+\item Inicializar un vector booleano de longitud $N$ en false, que indica que ning\'un proceso termin\'o.
+\item Buscar un proceso que no haya terminado y tal que todos los recursos que necesita para terminar est\'an disponibles. Si no existe dicho proceso ir al paso 4.
+\item Marcar al proceso del paso 2 como terminado y liberar todos sus recursos. Volver al paso 2.
+\item Si todos los procesos terminaron, el estado es seguro, caso contrario no lo es.
+\end{enumerate}
+
+\section{Memoria}
+
+\subsection{Direcciones f\'isicas vs. direcciones l\'ogicas}
+
+La memoria puede verse como una tira de bytes consecutivos. Cada uno de estos bytes tiene una direcci\'on (enteros consecutivos empezando desde el cero) mediante la cual se pueden acceder. Esta direcci\'on se denomina direcci\'on f\'isica.
+
+Cada vez que ejecutamos un proceso, este accede a memoria para cargar su c\'odigo, sus variables, y toda la dem\'as informaci\'on que necesite guardar. Si cada proceso decidiera utilizar direcciones espec\'ificas de la memoria, estar\'iamos en problemas cada vez que querramos cargar dos procesos que utilicen la misma direcci\'on de memoria, ya que por ejemplo, el c\'odigo de un proceso podr\'ia pisar variables del otro. Para resolver este problema tenemos la \textbf{Memory Management Unit (MMU)}, que es la unidad que se encarga de manejar la memoria. Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asignandole una porci\'on de la memoria f\'isica al proceso.
+
+Cada proceso tiene su espacio de memoria y no puede acceder a memoria que no le corresponde. De esta manera evitamos que un proceso pueda acceder a memoria de otro proceso.
+
+\subsection{Swapping}
+
+Si tenemos muchos procesos ejecutandose en paralelo, y cada uno de estos procesos consume mucha memoria, puede pasarnos que no entren todos los procesos en memoria. Para solucionar esto, existe una t\'ecnica llamada swapping, que consiste en pasar parte de la memoria a disco, para poder cargar otros fragmentos en memoria.
+
+El problema es que hacer swapping es lento, porque requiere accesos a disco que es mucho m\'as lento que la memoria.
+
+\subsection{Asignaci\'on din\'amica de la memoria}
+
+Cuando hacemos swapping, o tambi\'en cuando cargamos procesos en memoria y cuando los descargamos luego de finalizada su ejecuci\'on, vamos ocupando espacios de memoria que no son contiguos, y la memoria libre queda fragmentada. Existen varias estrategias sobre c\'omo asignar bloques de memoria libre a los fragmentos que tenemos que cargar, algunos de ellos son:
+
+\begin{itemize}
+\item First fit: En el primer bloque de memoria libre en el que entre el fragmento.
+\item Best fit: En el bloque de memoria libre m\'as chico en el que entre el fragmento.
+\item Worst fit: En el bloque de memoria libre m\'as grande.
+\item Quick Fit: Se mantiene una lista de bloques libres de los tama\~nos m\'as comunes. Por ejemplo, se mantiene la lista de los bloques de 4KB, de 8KB, de 12KB... Un bloque de 5KB puede ir a la lista de bloques de 4KB. De esta manera se puede hacer por ejemplo first fit en la lista que corresponda.
+\end{itemize}
+
+Existen dos m\'etodos que son los m\'as comunes para almacenar la informaci\'on sobre los bloques libres y ocupados de la memoria. Uno de ellos son los bitmaps y el otro las listas enlazadas.
+
+Cuando manejamos la memoria con bitmaps (mapas de bits) tenemos un bit por cada unidad de memoria que queremos asignar. Si por ejemplo, asignamos de a 32 bits, entonces $\frac{1}{33}$ de la memoria va a estar ocupada por el bitmap. Cada bit del bitmap es 0 si la unidad de memoria que representa est\'a libre, y 1 si est\'a ocupada. El problema que tiene este enfoque es que es bastante costoso encontrar bloques grandes de memoria. Tambi\'en hay un trade-off entre el tama\~no de la unidad m\'inima de asignaci\'on de memoria (que si es muy grande puede llevar a desperdiciar mucha memoria) y el tama\~no del bitmap (que si asigna unidades muy chicas de memoria puede ocupar una porci\'on significativa de la misma).
+
+Manejar la memoria con listas enlazadas implica tener una lista de bloques, libre o reservados, en la que en cada campo de la lista se indica el tama\~no del bloque, d\'onde empieza el bloque en memoria, y si est\'a libre u ocupado. En este caso es f\'acil asignar memoria ya que si se hace al principio o al final de un bloque (es lo m\'as com\'un) s\'olo hay que dividir una entrada de la lista en dos, la parte que ocupamos y la parte que queda libre. Liberar memoria es un poco m\'as complicado pero no tanto, s\'olo hay que tener en cuenta cuatro casos, que son las dos posibilidades para el bloque anterior (libre u ocupado) y las mismas dos posibilidades para el bloque siguiente. En caso de que el bloque anterior y/o el siguiente est\'en libres, entonces hay que mergear dos o tres entradas de la lista en una s\'ola entrada correspondiente a un bloque libre.
+
+\subsection{Fragmentaci\'on}
+
+Existen dos tipos de fragmentaci\'on de la memoria. Cuando vamos asignando bloques de memoria a los procesos, podr\'ia pasarnos que nos quedaran varios bloques libres no contiguos, que alcancen entre todos para satifacer un pedido, pero que ninguno tenga el tama\~no necesario para satifacer el pedido en un s\'olo bloque. Esto se conoce como fragmentaci\'on externa. Si en cambio, un proceso pide por ejemplo 2000 bytes, y la memoria se asigna de a 1KB, entonces se le va a asignar 2KB de memoria al proceso, dejando 48 bytes asignados al proceso que quedan inutilizados. Esto se conoce como fragmentaci\'on interna.
+
+Una posible soluci\'on al problema de la fragmentaci\'on es permitir que las direcciones l\'ogicas no mapeen a direcciones f\'isicas contiguas. Una implementaci\'on de esta soluci\'on es la paginaci\'on.
+
+\subsection{Paginaci\'on}
+
+La paginaci\'on consiste en dividir la memoria virtual (o l\'ogica) en bloques de un tama\~no fijo (generalmente 4KB) llamados p\'aginas, y la memoria f\'isica en bloques del mismo tama\~no llamados frames.
+
+Cuando hay paginaci\'on, la MMU es la que se encarga de asignar p\'aginas a frames, y las direcciones l\'ogicas est\'an compuestas por una parte que representa el n\'umero de p\'agina, y otra parte que representa el offset dentro de la p\'agina. Es por esto que las p\'aginas siempre deben medir una cantidad de bytes que sean potencias de dos, para poder dividir la direcci\'on en bits de n\'umero de p\'agina y bits de offset.
+
+Con paginaci\'on las p\'aginas que no est\'an en memoria son guardadas en disco, si en el momento de pedir una p\'agina, esta no se encuentra en memoria, se produce una page fault, que es una excepci\'on del sistema operativo, y la rutina de atenci\'on se encarga de cargar la p\'agina en memoria.
+
+Para saber si una p\'agina est\'a en memoria, y en caso de que est\'e, en qu\'e frame est\'a, la MMU guarda una tabla de p\'aginas, con una entrada por cada p\'agina, en las que se guarda entre otras cosas, un bit que indica si la p\'agina est\'a cargada en memoria, y el \'indice del frame en el que est\'a cargada. Adem\'as se guardan bits que indican, por ejemplo, si la p\'agina fue modificada luego de ser cargada en memoria, para saber si guardarla en disco al desalojarla o simplemente descartarla y quedarse con la versi\'on que ya hab\'ia en disco.
+
+Si por ejemplo tuviesemos 4GB de memoria, y p\'aginas de 4KB, tendr\'iamos una tabla de p\'aginas con un mill\'on de entradas. Adem\'as, la tabla de p\'aginas es propia de cada proceso, es decir, si tenemos $N$ procesos, tenemos $N$ tablas de p\'aginas, por lo que gran parte de la memoria estar\'ia ocupada por tablas de p\'aginas. Para solucionar este problema, se suele dividir las tablas en dos niveles: un directorio de tablas de p\'aginas que apunta a tablas de p\'aginas y una tabla de p\'aginas por cada entrada del directorio de tablas de p\'aginas. As\'i, si un proceso usa menos de 4MB de memoria, y las p\'aginas ocupan 4KB, entonces podemos tener un directorio de tablas de p\'aginas con 1024 entradas, una de ellas apuntando a una tabla de p\'aginas con 1024 entradas, y podemos direccionar los 4MB (1024 p\'aginas de 4KB) con tan solo 8KB (4KB del directorio de tablas y 4KB de la \'unica tabla).
+
+Una de las desventajas de paginaci\'on es que, al tener que convertir las direcciones virtuales en f\'isicas, direccionar una p\'agina puede ser un poco lento, ya que requiere ir a buscar la p\'agina a la tabla de p\'aginas, lo que implica un direccionamiento a memoria, y despu\'es buscar la p\'agina en el frame que corresponda, es decir, otro direccionamiento a memoria. El necesitar de dos direccionamientos a memoria (o tres en el caso de dos niveles de tablas) hace que obtener instrucciones o datos de la memoria sea m\'as lento. La soluci\'on que se encontr\'o a este problema es una peque\~na cach\'e que se denomina \textbf{Translation Lookaside Buffer (TLB)}. La TLB, tambi\'en conocida como memroia asociativa, contiene el frame en el que se encuentran las p\'aginas m\'as usadas. Al buscar una p\'agina en memoria, lo primero que se hace es buscarla en el TLB, y en caso de que se encuentre presente en el mismo, el acceso a la p\'agina es mucho m\'as r\'apido.
+
+\subsection{Reemplazo de p\'aginas}
+
+Si implementamos paginaci\'on, nos ahorramos el problema de decidir en qu\'e bloque de memoria libre cargar una p\'agina, ya que todos los bloques son frames del mismo tama\~no (el tama\~no de las p\'aginas), pero en caso de que no haya suficiente memoria libre, debemos decidir de alguna manera qu\'e p\'aginas desalojar de memoria.
+
+Veremos a continuaci\'on algunos algoritmos de reemplazo de p\'aginas. Para todos estos algoritmos existen dos versiones, una donde se desalojan las p\'aginas del mismo proceso, y otro donde se puede desalojar cualquier p\'agina de memoria.
+
+Es importante utilizar un buen algoritmo de reemplazo de p\'aginas para evitar el \textbf{trashing} (la situaci\'on en la que se pierde mucho tiempo swapeando p\'aginas de memoria a disco).
+
+\subsubsection{Algoritmo \'Optimo}
+
+El algoritmo \'optimo de reemplazo de p\'aginas consiste en desalojar de la memoria siempre la p\'agina que va a ser referenciada m\'as tarde, o alguna p\'agina que no vaya a ser nunca m\'as referenciada si existe. Este algoritmo es imposible de implementar pero se usa para comparar con los otros algoritmos a la hora de medir performance.
+
+\subsubsection{Not Recently Used}
+
+Las tablas de p\'aginas suelen guardar dos bits R y M que indican si la p\'agina fue referenciada y/o modificada respectivamente desde el momento en el que se carg\'o en memoria. Ambos bits son generalmente seteados por hardware en cada acceso a memoria y el bit R es reseteado peri\'odicamente por el sistema operativo. Las p\'aginas se dividen en cuatro categor\'ias seg\'un los bits R y M:
+
+\begin{enumerate}
+\item Ni referenciadas ni modificadas.
+\item Modificadas pero no referenciadas (puede pasar cuando el bit R se resetea).
+\item Referenciadas pero no modifcadas.
+\item Referenciadas y modificadas.
+\end{enumerate}
+
+El algoritmo Not Recently Used (NRU) desaloja de memoria una p\'agina al azar de la categor\'ia m\'as baja en la que haya al menos una p\'agina. La idea es que las p\'aginas que fueron referenciadas recientemente son m\'as propensas a ser referenciadas nuevamente, y para desempatar, es siempre m\'as costoso desalojar una p\'agina modificada, ya que hay que cargarla a disco.
+
+\subsubsection{First In First Out}
+
+El algoritmo FIFO consiste en desalojar siempre la p\'agina que fue cargada en memoria primera entre todas las p\'aginas que est\'an cargadas en memoria. Es uno de los m\'as sencillos pero es bastante ineficiente ya que puede ser que una p\'agina cargada hace mucho tiempo sea una de las m\'as utilizadas.
+
+\subsubsection{Second Chance}
+
+Second Chance es parecido a FIFO, pero difiere en que revisa el bit R de la p\'agina. Si el bit R de la p\'agina m\'as vieja es 0 entonces la desaloja, si en cambio es 1, lo resetea a 0 y la vuelve a encolar como si la p\'agina fuese reci\'en cargada en memoria.
+
+\subsubsection{Clock}
+
+Es muy parecido a Second Chance, pero en vez de guardar una cola, guarda una lista circular, y mueve un puntero a lo largo de la lista. Si una p\'agina tiene el bit R en 1 entonces avanza el puntero a la pr\'oxima posici\'on de la lista, y cuando encuentra una p\'agina con el bit R en 0, entonces la cambia por la nueva p\'agina y avanza tambi\'en el puntero.
+
+\subsubsection{Least Recently Used}
+
+El algoritmo Least Recently Used desaloja siempre la p\'agina que fue usada hace m\'as tiempo. En vez de guardar el momento en el que fue cargada en memoria, como en FIFO, guarda el momento en el que fue referenciada por \'ultima vez.
+
+\subsection{Segmentaci\'on}
+
+Tenemos dos problemas que surgen ahora: protecci\'on y reubicaci\'on. El primero podemos solucionarlo con una tabla de p\'aginas para cada proceso, para que cada proceso pueda acceder s\'olo a sus p\'aginas, pero todav\'ia nos queda el segundo.
+
+Una soluci\'on que existe para estos dos problemas es la segmentaci\'on. Un segmento es un espacio de memoria de tama\~no variable, que es direccionado mediante un registro que hace referencia al principio del segmento.
+
+A diferencia de paginaci\'on, donde las p\'aginas son invisibles para el programador, los segmentos son visibles y el programa debe especificar a qu\'e segmento hace referencia cuando quiere acceder a memoria.
+
+Todav\'ia tenemos con segmentaci\'on el problema de la fragmentaci\'on y el swapping. Por eso se suelen combinar la paginaci\'on con la segmentaci\'on.
+
+Intel implementa segmentaci\'on en sus procesadores Pentium con una GDT (Global Descriptor Table) global y una LDT (Local Descriptor Table) para cada proceso. Los registros CS (code segment) y DS (data segment) se denominan selector de segmento y son registros de 16 bits que apuntan a una entrada de la GDT o de la LDT (13 bits para la entrada en la tabla, 1 para indicar a en qu\'e tabla est\'a el descriptor de segmento y 2 para permisos). Una vez cargado el descriptor del segmento, que nos dice donde empieza y cu\'anto mide el segmento, se obtiene por un registro mediante el cual se direcciona, el offset en el segmento y, chequeando previamente que el offset sea v\'alido, se convierte la direcci\'on l\'ogica en direcci\'on lineal (la que luego pasa por paginaci\'on).
+
+A diferencia de las p\'aginas los segmentos pueden solaparse, por ejemplo, cuando hay memoria compartida.
+
+\subsection{Copy on Write}
+
+Como vimos anteriormente, un proceso puede crear otros procesos mediante la system call $fork$. Cuando un proceso crea otro proceso, ambos comparten la memoria que ten\'ia el proceso padre. Existen dos opciones para manejar la memoria en este caso: Una de ellas consiste en copiar toda la memoria y tener dos copias de los mismos datos y el mismo c\'odigo en memoria desde el principio, y la otra es hacer la copia en alg\'un momento entre que se crea el proceso y se necesita escribir la memoria.
+
+Cuando el sistema operativo decide copiar la memoria al momento en el que uno de los dos proceso decide escribirla, se dice que estamos haciendo Copy on Write.
+
+\section{Archivos y Directorios}
+
+\subsection{Definici\'on de archivo}
+
+Para nosotros un archivo es una secuencia de bytes que son almacenados en una unidad de almacenamiento como puede ser por ejemplo un disco r\'igido. Todos los archivos tienen un nombre, y pueden tener una extensi\'on (una o m\'as letras despu\'es del \'ultimo caracter '.' en el nombre del archivo).
+
+Un archivo generalmente tiene los siguientes atributos:
+
+\begin{itemize}
+\item Nombre: El nombre del archivo, posiblemente con su extensi\'on.
+\item Identificador: Un nombre que el usuario no ve, que sirve para identificarlo en el file system (m\'as adelante veremos qu\'e es un file system)
+\item Tipo: Puede ser ejecutable, archivo de texto plano, una imagen, etc.
+\item Ubicaci\'on: En qu\'e dispositivo y qu\'e directorio dentro del dispositivo se encuentra el archivo.
+\item Tama\~no: El tama\~no en bytes o en bloques del archivo.
+\item Permisos: Qui\'en puede leer, escribir o ejecutar el archivo.
+\item Fecha, hora y usuario: Sirve para saber cu\'ando se cre\'o o se modific\'o el archivo y qui\'en fue el usuario que lo cre\'o o modific\'o.
+\end{itemize}
+
+Un archivo es una unidad de almacenamiento l\'ogica sobre la cu\'al se pueden realizar las siguientes operaciones:
+
+\begin{itemize}
+\item Crear un archivo: Primero se debe buscar espacio en el file system para el archivo, y luego se debe ubicar el archivo en el directorio correspondiente asignandole un nombre.
+\item Escribir un archivo: Para escribir un archivo se debe invocar una system call del sistema operativo indicando el nombre del archivo y el contenido que se desea escribir. Dado el nombre del archivo, el sistema operativo debe buscar el directorio donde se encuentra para ubicar el archivo en el file system.
+\item Leer un archivo: Para leer un archivo debemos usar una system call especificandole el nombre del archivo y d\'onde queremos que cargue el archivo en memoria.
+\item Borrar un archivo: Hay que buscar el archivo en el directorio correspondiente, liberar el espacio que ocupa el archivo y borrar la entrada correspondiente a ese archivo en el directorio.
+\end{itemize}
+
+\subsection{Directorios}
+
+Los archivos en un file system est\'an organizados en directorios. Existen varias formas de definir la estructura l\'ogica de un directorio. A continuaci\'on veremos algunas de ellas.
+
+\subsubsection{Single Level Directory}
+
+Una opci\'on no muy conveniente es tener todos los archivos en un s\'olo directorio. Esto puede traer problemas ya que si todos los archivos est\'an en un mismo directorio, entonces no podemos tener dos archivos con el mismo nombre en el disco. De esta manera, los usuarios tienen que, por ejemplo, cuidarse de no usar nombres de archivos que hayan usado otros usuarios. Definitivamente no es la mejor opci\'on.
+
+\subsubsection{Two Level Directory}
+
+Otra opci\'on, que tampoco es la mejor, es tener un directorio con un subdirectorio para cada usuario. Esto soluciona el problema de nombrar archivos con un nombre que haya usado otro usuario para otro archivo, pero sigue teniendo el problema que no podemos tener dos archivos con un mismo nombre bajo un mismo usuario. Tambi\'en tiene el problema de que no se pueden compartir archivos salvo que permitamos que un usuario acceda al directorio de otro usuario.
+
+\subsubsection{Tree Structured Directory}
+
+Los directorios pueden ser vistos tambi\'en como \'arboles. Existe un directorio al que llamamos root (o raiz, que es la raiz del \'arbol), y cada uno de los dem\'as directorio est\'a contenido en otro directorio, formando as\'i un \'arbol. Con esta estructura, cada directorio puede contener archivos y subdirectorios.
+
+Cada archivo tiene un nombre y un path. El path es el camino en el \'arbol del directorio raiz hasta el directorio donde se encuentra el archivo. Podemos considerar al path seguido por el nombre del archivo como el nombre real del archivo para el sistema operativo. Por ejemplo, si el archivo se llama hola.txt y su path es /abc/def/ghi, entonces podemos considerar/abc/def/ghi/hola.txt como el nombre del archivo.
+
+Los directorios son considerados un tipo de archivo especial, cada entrada en la tabla del directorio (la que contiene la lista de archivos del directorio) tiene un bit que indica si el archivo que corresponde a esa entrada se trata de un directorio o si es otro tipo de archivo.
+
+\subsubsection{Acyclic Graph Directories}
+
+Otra opci\'on es mantener un grafo dirigido ac\'iclico (DAG, por sus siglas en ingl\'es) de directorios. Esto se logra agregandole a la versi\'on de \'arbol de directorios la posibilidad de tener links de un directorio a otro, haciendo que un archivo o directorio pueda estar en dos directorios al mismo tiempo.
+
+Un problema que surge ahora es c\'omo recorrer los directorios, ya que no nos gustar\'ia recorrer dos veces el mismo directorio. Otro problema es cu\'ando borrar un archivo o directorio, la soluci\'on a esto es que cuando se borra un link no se borre el directorio original.
+
+\subsubsection{General Graph Directories}
+
+Otra opci\'on que tenemos es agregar links y que el grafo ya no tenga porqu\'e ser ac\'iclico, en este caso hay varias consideraciones que tener en cuenta a la hora de borrar archivos o recorrer el file system.
+
+\section{File systems}
+
+\subsection{¿Qu\'e es un file system?}
+
+Los file systems (o sistemas de archivos) son los encargados de darle forma al contenido de un disco, y de organizar los archivos que hay en el mismo. Los discos est\'an divididos en sectores. El sector 0 de un disco se denomina \textbf{Master Boot Record (MBR)} y es la parte del disco que se ejecuta al prender una computadora.
+
+Sobre el final del MBR se encuentra la tabla de particiones. Esta tabla dice d\'onde empieza y d\'onde termina cada partici\'on, y adem\'as indica qu\'e partici\'on se debe ejecutar desde su primer bloque, llamado boot block.
+
+\subsection{Implementaci\'on de file systems}
+
+Lo m\'as importante a la hora de implementar un file system es saber qu\'e bloques del disco se corresponden con qu\'e archivos. Hay varias formas de implementar esto, veremos a continuaci\'on algunas de ellas.
+
+\subsubsection{Almacenamiento continuo}
+
+Una forma de implementar un file system es almacenando los archivos en bloques continuos. De esta manera s\'olo es necesario recordar, para cada archivo, en qu\'e bloque comienza el archivo y cu\'antos bloques ocupa. Tambi\'en logramos as\'i una alta performance ya que s\'olo hay que buscar un bloque una vez (el primer bloque) y de ah\'i en m\'as no es necesario buscar m\'as bloques ya que son todos consecutivos.
+
+Lamentablemente esta implementaci\'on, que es super eficiente a la hora de leer archivos en el disco, es imposible de implementar en discos de lectura/escritura como son por ejemplo los discos r\'igidos, ya que cuando el disco se empieza a llenar y empezamos a borrar archivos, empiezan a quedar espacios libres en el medio del disco. Adem\'as, una vez creado un archivo, si queremos seguir agrandando el archivo (por ejemplo, un documento de texto al que le queremos agregar dos p\'aginas) no podemos ya que nos vamos a chocar con el archivo siguiente.
+
+Afortunadamente, esta implementaci\'on que es eficiente y sencilla de implementar, est\'a presente en algunas unidades de almacenamiento como lo son por ejemplo los CD-ROMs.
+
+\subsubsection{Almacenamiento con listas enlazadas}
+
+Otra alternativa es guardar los bloques como listas enlazadas. S\'olo guardamos en el file system el puntero al primer bloque, y despu\'es en cada bloque guardamos un puntero al siguiente bloque del archivo. Una desventaja que tiene esta implementaci\'on es que para buscar el $n$-\'esimo bloque hay que recorrer los primeros $n-1$ bloques.
+
+\subsubsection{Tablas FAT}
+
+Una alternativa al almacenamiento con listas enlazadas es lo que se conoce como \textbf{File Allocation Table (FAT)}, que es una tabla que, para cada bloque guarda el n\'umero del siguiente bloque del archivo al que pertenece ese bloque. Para el \'ultimo bloque del archivo guarda un -1 indicando que termin\'o el archivo en ese bloque.
+
+Una ventaja que tiene el uso de tablas FAT es que el acceso aleatorio es mucho m\'as eficiente, ya que al estar todo el bloque ocupado con datos, y no tener los punteros al bloque siguiente, calcular el offset en un archivo se vuelve mucho m\'as r\'apido ya que los tama\~nos de los bloques son potencias de 2, y siempre es m\'as f\'acil calcular un offset cuando tenemos que saltear $n$ bloques que contienen una cantidad de datos potencia de 2.
+
+Una desventaja que tiene la FAT es que como toda la tabla tiene que estar en memoria, esta ocupa demasiado espacio en la misma. Por ejemplo, con un disco de 200GB, bloques de 1KB, y entradas de 4 bytes, la tabla ocupar\'ia 800MB de memoria.
+
+\subsubsection{i-nodos}
+
+Los i-nodos (index node) son estructuras de datos que continen los atributos de un archivo y links a los bloques en los que est\'a almacenado el archivo. La ventaja de los i-nodos sobre las tablas FAT es que los i-nodos (uno por archivo) s\'olo est\'an presentes en memoria cuando el archivo est\'a cargado en memoria, por lo que podemos tener un disco arbitrariamente grande que no vamos a tener que tener una cantidad proporcional de i-nodos cargados en memoria.
+
+El problema surge cuando hay m\'as bloques que la capacidad de los i-nodos. Por ejemplo, si un archivo tiene 1000 bloques y un i-nodo tiene capacidad para direccionar a 512 bloques, entonces un i-nodo no va a servir en este caso. Para solucionar este problema, algunas implementaciones de i-nodos reservan las \'ultimas entradas para apuntar a bloques que a su vez apuntan a bloques del archivo.
+
+La implementaci\'on de UNIX de los i-nodos tiene tres entradas reservadas en cada i-nodo, que son las \'ultimas tres. Las primeras 12 entradas en el i-nodo apuntan a bloques del archivo (en realidad antes de estas 12 entradas hay espacio para atributos del archivo, por lo que estas primeras 12 entradas no son lo primero que hay en el i-nodo). La entrada n\'umero 13 apunta a un bloque que tiene 2048 entradas (recordemos que los bloques en UNIX son de 8KB por lo que 2048 entradas representa entradas de 32 bits) que apuntan a bloques del archivo, esto nos suma 16MB a los 96KB que ya pod\'ia tener un archivo con las primeras 12 entradas. La entrada 14 apunta a un bloque que a su vez apunta en cada entrada a bloques que apuntan a bloques del archivo, esto nos da la posibilidad de 32GB. A su vez, la entrada 15 permite triple indireccionamiento (bloques que apuntan a bloques que apuntan a bloques que apuntan a bloques del archivo!!!!) lo que permite archivos de hasta 64TB!
+
+\subsection{Implementando directorios}
+
+El \'arbol de directorios en UNIX se implementa con un i-nodo especial que apunta al root directory, y en cada directorio hay un bloque que tiene una lista de pares (nombre de archivo,i-nodo), donde el archivo puede ser a su vez un subdirectorio, que le indica cu\'al es el i-nodo correspondiente a cada uno de los archivos en ese directorio (los archivos, nuevamente, pueden ser directorios). En algunos casos, cuando los directorios tienen muchos archivos, en lugar de guardar los nombres de los archivos con sus i-nodos correspondientes uno por uno, se utiliza una tabla de hash que hashea los nombres de los archivos y nos da los pares de (nombre de archivo,i-nodo) que matchean ese hash.
+
+Generalmente los i-nodos se encuentran despu\'es del boot block y del superblock (un bloque que contiene informaci\'on sobre el file system como por ejemplo qu\'e file system es y cu\'antos i-nodos tiene). Despu\'es de todos los i-nodos vienen los bloques del disco.
+
+\subsection{Atributos}
+
+Cada archivo tiene sus atributos, que en el caso de los i-nodos, se guardan en los primeros bytes de cada i-nodo. Algunos de estos atributos son:
+
+\begin{itemize}
+\item Permisos.
+\item Tama\~no.
+\item Propietario(s).
+\item Fechas de creaci\'on, modificaci\'on y acceso.
+\item Flags.
+\item CRC (bytes que sirven para verificar que el archivo no est\'e da\~nado).
+\end{itemize}
+
+\subsection{Journaling}
+
+Para evitar escrituras constantes en el disco podr\'iamos tener una cach\'e (una copia de bloques de disco en memoria) que se maneje de modo similar a las p\'aginas. Un problema que puede tener esto es por ejemplo que se corte la energ\'ia el\'ectrica antes de que se bajen los datos de memoria a disco.
+
+Una alternativa a este problema es lo que se conoce como journaling. Algunos file systems tienen un log o journal (de ah\'i el nombre journaling) que es un registro de cambios que hay que hacer en el disco. Eso se graba en un buffer circular en disco, y es mucho m\'as r\'apido escribir en este buffer que en bloques aleatorios ya que la escritura es secuencial. Estos cambios se van actualizando en el disco, y si por ejemplo, se llena el buffer, se actualizan todos los cambios para tener lugar nuevamente en el buffer. Cuando el sistema se levanta luego de un apagado inesperado estos cambios se realizan en el disco.
+
+\subsection{Bloques libres}
+
+Un problema importante a resolver por el file system es c\'omo mantener la lista de bloques libres. Hay dos approachs a este problema que son los m\'as comunes. Uno es mantener un bitmap con cada bit en 0 si el bloque est\'a libre y en 1 si el bloque est\'a ocupado. Por ejemplo con bloques de 8KB, y un disco de 500GB, necesitamos alrededor de 1000 bloques para almacenar el bitmap.
+
+La otra posibilidad es mantener una lista de bloques libres, en los mismos bloques libres. Guardamos un puntero al primer bloque libre, y en ese bloque libre guardamos una lista de bloques libres, reservando una entrada para el pr\'oximo bloque donde contin\'ua la lista. La ventaja de este approach es que los bloques libres se almacenan en bloques libres, y si tenemos menos bloques libres (el disco casi lleno) entonces la lista de bloques libres es m\'as chica y entra en los pocos bloques libres que tenemos.
+
+Una optimizaci\'on a esta \'ultima implementaci\'on es guardar un par que tenga un bloque libre, y la cantidad de bloques libres a partir de ese bloque. Esta optimizaci\'on, sin embargo, se vuelve ineficiente cuando el disco se empieza a fragmentar demasiado.
+
+\subsection{Network file systems}
+
+Existen file systems para sistemas distribuidos, en donde un file system reside en un servidor y varios clientes pueden acceder a los archivos del file system. Un ejemplo de un network file system es NFS. NFS permite montar directorios de un file system remoto en un file system local para permitir el acceso a los archivos como si fuesen parte del file system local. Pese a ser muy sencillo, NFS no escala bien.
+
+\section{Entrada/Salida}
+
+\subsection{Drivers}
+
+Los dispositivos de entrada salida necesitan una forma de comunicarse con la CPU. Por ejemplo, un mouse necesita saber decirle al procesador que el usuario hizo un click o un desplazamiento hacia la derecha. Para esta comunicaci\'on existen m\'odulos de software muy espec\'ificos llamados drivers. Existen varias formas en las que los drivers pueden comunicarse con los dispositivos para saber cu\'ando los dispositivos terminaron de hacer algo (por ejemplo, cuando el usuario movio el mouse, cuando el disco termin\'o de escribir un archivo, o cu\'ando una impresora termin\'o de imprimir un documento). Veremos a continuaci\'on tres de estas formas.
+
+\subsubsection{Polling}
+
+El driver le pregunta peri\'odicamente al dispositivo si hay novedades. Es una de las formas m\'as sencillas de comunicar un dispositivo con un driver, aunque es poco eficiente porque consume mucha CPU. En algunos casos muy puntuales puede ser una buena idea ya que si bien consume mucha CPU, es m\'as eficiente que lo que consumen las interrupciones con los cambios de contexto.
+
+\subsubsection{Interrupciones}
+
+El dispositivo le avisa al controlador de interrupciones que termin\'o de hacer su tarea. Este a su vez, decide cu\'ando atender la interrupci\'on y avisarle al driver que tiene trabajo que hacer. Cuando interviene la CPU estamos ante una E/S programada (Programmed I/O).
+
+\subsubsection{DMA}
+
+Se requiere de un componente de Hardware, el controlador de DMA. Este se encarga de comunicarse con los dispositivos y le avisa a la CPU por medio de una interrupci\'on cuando ya termin\'o de realizar la entrada/salida.
+
+\subsection{Subsistema de E/S}
+
+El manejador de entrada/salida le provee al programador una API sencilla para comunicarse con los dispositivos. Sin embargo, hay cosas que no se le pueden ocultar a los procesos. Estos deben saber por ejemplo si tienen acceso exclusivo a un dispositivo. Esta responsabilidad es compartida entre el manejador de E/S y los drivers.
+
+Una de las tareas del sistema operativo es ocultar las particularidades de cada dispositivo brindando una API gen\'erica para acceder a todos los dispositivos del mismo tipo. Los dispositivos pueden ser de lectura, escritura o ambas, pueden ser dedicados o compartidos, y pueden tener distintas velocidades de respuesta.
+
+Existen dos tipos de dispositivos de entrada/salida.
+
+\subsubsection{Char devices}
+
+Los char devices son dispositivos que transmiten la informaci\'on byte a byte. Estos dispositivos no soportan acceso aleatorio y no utilizan cach\'e. Algunos ejemplos son mouses, teclados, etc.
+
+\subsubsection{Block devices}
+
+Los block devices son dispositivos en los que la informaci\'on se transmite por bloques. Estos dispositivos soportan acceso aleatorio y generalmente utilizan un buffer (cach\'e).
+
+\subsection{Discos}
+
+Una de las claves para obtener un buen rendimiento de E/S es manejar apropiadamente el disco. El disco tiene una cabeza que se mueve y moverlo consume tiempo. Los pedidos de acceso a disco llegan constantemente y es importante atenderlos de modo tal de minimizar estos movimientos pero sin generar inanici\'on.
+
+El tiempo necesario para que el disco rote y la cabeza quede sobre el sector deseado se llama latencia rotacional, pero lo m\'as importante, es el tiempo de b\'usqueda (seek time), que es el tiempo necesario para que la cabeza se ubique sobre el cilindro que tiene el sector buscado.
+
+Existen varias pol\'iticas de scheduling de acceso a disco, algunas de las cuales optimizan el seek time para hacer los accesos a disco m\'as r\'apidos.
+
+\subsubsection{First Come First Serve}
+
+Esta pol\'itica es la m\'as simple, y consiste en atender los pedidos en el orden en el que van llegando. Si bien es la pol\'itica m\'as simple porque no requiere nada m\'as que guardar los pedidos en una cola FIFO, suele ser muy ineficiente.
+
+\subsubsection{Shortest Seek Time First}
+
+La pol\'itica SSTF consiste en atender siempre el pedido que involucre el menor seek time. Esta pol\'itica es un poco m\'as eficiente que FCFS pero puede generar inanici\'on. Al igual que FCFS no es una pol\'itica muy buena y est\'a lejos de ser \'optima.
+
+\subsubsection{SCAN}
+
+El algoritmo SCAN (o algoritmo del ascensor) recorre el disco de una punta a la otra ida y vuelta, atendiendo los pedidos en orden. Si llega un pedido por el cilindro por el que acaba de pasar la cabeza tiene que esperar a que llegue al final y vuelva. Igualmente es mucho m\'as eficiente que los anteriores porque optimiza un poco m\'as que FCFS el uso de la cabeza y no genera inanici\'on.
+
+\subsubsection{Circular SCAN}
+
+Circular SCAN (o C-SCAN) funciona como SCAN, con la diferencia de que recorre el disco de una punta a la otra, y cuando llega al extremo final vuelve al extremo inicial sin atender recorridos en el camino.
+
+\subsubsection{Look}
+
+El algoritmo Look funciona como SCAN pero con la diferencia de que si ve que no tiene pedidos en lo que le queda por recorrer del disco, empieza el camino hacia el otro lado atendiendo pedidos sin ir hasta el fondo y volver. Tambi\'en existe la versi\'on Circular Look (o C-Look).
+
+En la vida real no se utiliza ninguno de estos algoritmos sino que se agregan prioridades.
+
+\subsection{Gesti\'on del Disco}
+
+Al formatear los discos se ponen unos c\'odigos en cada sector del disco que sirven a la controladora para detectar y corregir errores. Fucionan como un prefijo y un postfijo de la parte donde van los datos en cada sector. Si al leer el sector, estos c\'odigos no tienen el valor que deber\'ian el sector est\'a da\~nado.
+
+Los discos suelen tener una secci\'on en ROM que carga a memoria algunos sectores del disco y los comienza a ejecutar. Este programa no es parte del sistema operativo sino que es un programa que carga el sistema operativo.
+
+Los bloques da\~nados se manejan a veces por software y el file system es el responsable de tenerlos anotados, por ejemplo en FAT.
+
+Los discos SCSI vienen con sectores extra para reemplazar a los defectuosos. La controladora es la encargada de reemplazar un sector defectuoso por uno de los sectores extra actualizando una tabla interna. Para no interferir con el scheduler de E/S los discos suelen traer sectores extra en todos los cilindros.
+
+\subsection{Backup}
+
+Hay formas de proteger la informaci\'on, algunas m\'as seguras y otras menos seguras. La pol\'itica MSSVR (mir\'a si se va a romper!) suele ser una de las menos efectivas. Hay otras formas de proteger la informaci\'on, como por ejemplo, haciendo backup.
+
+Se suele hacer en cintas y hay tres tipos de backups que son los m\'as usados:
+
+\begin{itemize}
+\item Copias totales: Se copia toda la informaci\'on del disco.
+\item Copias incrementales: Se copian todos los archivos modificados desde la \'ultima copia total o incremental.
+\item Copias diferenciales: Se copian todos los archivos modificados desde la \'ultima copia total.		
+\end{itemize}
+
+\subsection{RAID}
+
+A veces hacer backup no alcanza, se puede romper un disco justo antes de hacer el backup y perdemos toda la informaci\'on desde el \'ultimo backup. Para evitar ese problema se suele utilizar RAID (Redundant Array of Inexpensive Disks). La idea b\'asicamente es copiar la informaci\'on en m\'as de un disco para que si se me rompe uno siga teniendo el otro. Tiene algunas ventajas como que puedo hacer lecturas en simultaneo de los dos discos pero es muy costoso escribir en dos discos a la vez. Adem\'as, tener dos copias de toda la informaci\'on puede requerir demasiado espacio en disco. Existen varios tipos de RAID que balancean todas estas ventajas y desventajas:
+
+\begin{itemize}
+\item RAID 0 (stripping): No aporta redundancia. Consiste en tener la mitad de la informaci\'on en un disco y la mitad en otro. Permite escrituras en simultaneo si los discos est\'an en diferentes controladoras.
+\item RAID 1 (mirroring): Se mantienen dos copias del mismo disco. Es costoso pero soporta la caida de un disco.
+\item RAID 0+1: Es un RAID 1 de dos RAID 0. El RAID 1 provee redundancia y el RAID 0 rendimiento. Es costoso al igual que RAID 1.
+\item RAID 1+0: Es un RAID 0 de dos RAID 1. Es mejor que RAID 0+1 ya que si se cae un disco en un RAID 0+1 todo el RAID 0 queda inutilizable, en cambio si se cae un disco en un RAID 1+0 s\'olo ese disco queda inutilizable. Si se caen dos discos en un RAID 0+1 la probabilidad de que todos los discos queden inutilizables es $\frac{2}{3}$ mientras que en un RAID 1+0 es $\frac{1}{3}$. Es igual de costoso que RAID 0+1.
+\item RAID 2: Requiere 3 discos de paridad por cada 4 de datos. Es m\'as lento que RAID 1. Cada bloque l\'ogico se distribuye entre todos los discos.
+\item RAID 3: Requiere 1 disco de paridad por cada 4 de datos. Es m\'as eficiente que RAID 2. Al igual que en RAID 2, cada bloque l\'ogico se distribuye entre todos los discos.
+\item RAID 4: Es parecido a RAID 3 pero hace el stripping a nivel de bloque.
+\item RAID 5: En vez de tener un disco de paridad, distribuye la paridad entre todos los discos. Esto hace que no haya un cuello de botella en el disco de paridad.
+\item RAID 6: Es como RAID 5 pero utilizando dos bloques de paridad. Los dos bloques de paridad usan paridades distintas, uno de ellos la paridad com\'un y corriente y el otro alg\'un c\'odigo de correci\'on de errores como por ejemplo el c\'odigo de Reed-Solomon.
+\end{itemize}
+
+RAID no proteje contra cosas como borrar accidentalmente un archivo, por eso se suele combinar RAID con backups.
+
+\subsection{Spooling}
+
+Hay dispositivos que requieren acceso dedicado, como por ejemplo las impresoras. Si mandamos a imprimir dos documentos no nos gustar\'ia que se impriman las l\'ineas de los dos documentos alternadamente sino que queremos imprimir un documento y despu\'es imprimir el otro. Tampoco queremos que el proceso que mand\'o a imprimir se bloquee esperando que terminen todas las dem\'as impresiones. Para eso podemos poner todos los trabajos en una cola y un proceso se encarga de ir desencol\'andolos. El sistema operativo nunca se entera que est\'a haciendo spooling, los usuarios s\'i, y pueden acceder a la cola, por ejemplo, para cancelar la impresi\'on de un documento.
+
+\section{Sistemas distribuidos}
+
+\subsection{¿Qu\'e son los sistemas distribuidos?}
+
+Existen tres conceptos que son similares pero no iguales:
+
+\begin{itemize}
+\item C\'omputo simult\'aneo: Un scheduler asigna un quantum a cada proceso. Los procesos se ejecutan simultaneamente.
+\item C\'omputo paralelo: M\'as de una CPU en una misma m\'aquina.
+\item C\'omputo distribuido: Varios procesadores que no comparten memoria, clock, etc.
+\end{itemize}
+
+Hay cuatro razones importantes por las que los sistemas distribuidos pueden ser una buena opci\'on:
+
+\begin{itemize}
+\item Compartir recursos: A veces es muy \'util poder compartir los recursos entre varias m\'aquinas (desde archivos en un disco hasta una impresora).
+\item Velocidad de c\'omputo: En sistemas distribuidos podemos aprovechar el uso de procesadores en m\'aquinas distintas para mejorar la velocidad de c\'omputo.
+\item Confiabilidad: Un sistema distribuido puede soportar la falla de una de sus m\'aquinas permitiendo que otras m\'aquinas se ocupen de las tareas de las que estaba encargada la m\'aquina que fall\'o.
+\item Comunicaci\'on: La comunicaci\'on entre procesos en distintas m\'aquinas de un sistema distribuido puede ser muy \'util.
+\end{itemize}
+
+La taxonom\'ia de Flynn divide a los sistemas en SISD, SIMD, MISD, MIMD (Single/Multiple Instruction Single/Multiple Data).
+
+Los sistemas distribuidos comparten el scheduler y un canal de comunicaciones, pero no la memoria ni el clock.
+
+Es importante la manera en la que los procesos se comunican entre s\'i en un sistema distribuido. La forma en la que se estructuran los procesos para que cooperen entre s\'i se llama arquitectura de software. El qu\'e comparten y qu\'e no (memoria, scheduler, clock, etc) se llama arquitectura de hardware.
+
+\subsection{Arquitecturas de Hardware}
+
+Existen varias arquitecturas de hardware, a continuaci\'on analizaremos algunas de ellas.
+
+\begin{itemize}
+\item Symetric Multi Processing (SMP): consiste en varios procesadores compartiendo la memoria. Los procesadores suelen ser iguales.
+\item Multicore: M\'as de un procesador, compartiendo cach\'e L2.
+\item NUMA: Cada procesador tiene su memoria local, aunque puede, de manera m\'as lenta, acceder a la memoria de los otros procesadores.
+\item Redes: Es el nombre que se le suele dar cuando son un conjunto de computadoras independientes. Hasta hace un tiempo se utilizaba el t\'ermino NOW (Network of Workstations).
+\item Clusters: Un conjunto de computadoras conectadas por una red de alta velocidad que comparten el scheduler.
+\end{itemize}
+
+Un grid es un conjunto de clusters, cada uno bajo un dominio administrativo distinto, generalmente alejados geogr\'aficamente.
+
+Cloud computing es el t\'ermino que se utiliza para clusters donde uno puede alquilar poder de c\'omputo.
+
+\subsection{Arquitecturas de Software}
+
+Telnet es un protocolo (y un programa que utiliza el protocolo) para conectarse a un equipo remotamente. Con telnet los recursos necesarios para cierta parte del procesamiento est\'an en un equipo remoto. Telnet existe desde 1969.
+
+RPC (Remote Procedure Call) es un mecanismo que permite hacer llamadas a subrutinas que se encuentran en otro equipo remotamente.
+
+Tanto Telnet como RPC implican una m\'aquina activa que procesa y una m\'aquina pasiva que manda a procesar. Estas arquitecturas se suelen denominar cliente/servidor. El servidor es un componente que da servicios cuando el cliente se lo pide. El programa principal hace de cliente de los servicios que va necesitando para completar su tarea.
+
+La conjetura de Brewer dice que en un entorno distribuido s\'olo se pueden garantizar dos de las siguientes tres: consistencia, disponibilidead y tolerancia a fallos.
+
+\subsection{Locks en sistemas distribuidos}
+
+En sistemas distribuidos no hay TestAndSet at\'omicos, entonces, ¿c\'omo implementamos los locks?. Una de las soluciones m\'as sencillas es designar un nodo para que se encargue de administrar los recursos, y crear procesos en ese nodo (proxies) que representen a los procesos remotos, teniendo que pedirle los procesos remotos a los proxies que negocien los recursos por ellos.
+
+Este enfoque centralizado tiene varios problemas. Uno de ellos es el cuello de botella. Otro problema es que ante la falla del servidor se cae todo el sistema.
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
