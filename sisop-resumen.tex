@@ -109,7 +109,7 @@ La implementaci\'on de Unix (y por lo tanto de Linux) del intercambio de mensaje
 
 \subsection{¿Qu\'e es un thread?}
 
-Hasta ahora estudiamos a los procesos como un \'unico hilo de ejecuci\'on que se ejecuta en una CPU. Los threads nos permiten separar los procesos en varios hilos de ejecuci\'on que pueden correr en simultaneo en distintas CPUs. Un thread es una unidad b\'asica de ejecuci\'on que tiene su propio \textbf{tid (thread id)}, que sirve para identificarlo de la misma manera que el pid identifica a un proceso, su propio estado del set de registros de la CPU, y su propia \'area de stack en memoria. Todos los dem\'as recursos como lo son por ejemplo la secci\'on de c\'odigo o datos en memoria, los archivos abiertos, o los dispositivos de entrada/salida con los que se comunica el thread, con compartidos con todos los threads del mismo proceso.
+Hasta ahora estudiamos a los procesos como un \'unico hilo de ejecuci\'on que se ejecuta en una CPU. Los threads nos permiten separar los procesos en varios hilos de ejecuci\'on que pueden correr en simult\'aneo en distintas CPUs. Un thread es una unidad b\'asica de ejecuci\'on que tiene su propio \textbf{tid (thread id)}, que sirve para identificarlo de la misma manera que el pid identifica a un proceso, su propio estado del set de registros de la CPU, y su propia \'area de stack en memoria. Todos los dem\'as recursos como lo son por ejemplo la secci\'on de c\'odigo o datos en memoria, los archivos abiertos, o los dispositivos de entrada/salida con los que se comunica el thread, con compartidos con todos los threads del mismo proceso.
 
 Algunas de las ventajas del uso de threads son
 
@@ -132,7 +132,7 @@ Si bien los threads comparten la memoria del proceso al cual pertenecen, es posi
 
 \subsection{Scheduling}
 
-Cuando m\'as de un proceso corre en simultaneo, es necesario decidir cu\'ando y cu\'anto tiempo corre cada proceso (o thread). Los algoritmos que determinan cu\'ando se desaloja un proceso o thread de una determinada CPU, dando lugar a otro proceso o thread para que corra se llaman algoritmos de scheduling. De ahora en m\'as hablaremos de scheduling de procesos, aunque todo lo que digamos es tambi\'en v\'alido para threads.
+Cuando m\'as de un proceso corre en simult\'aneo, es necesario decidir cu\'ando y cu\'anto tiempo corre cada proceso (o thread). Los algoritmos que determinan cu\'ando se desaloja un proceso o thread de una determinada CPU, dando lugar a otro proceso o thread para que corra se llaman algoritmos de scheduling. De ahora en m\'as hablaremos de scheduling de procesos, aunque todo lo que digamos es tambi\'en v\'alido para threads.
 
 Cuando una CPU se libera, es necesario decidir qu\'e proceso empieza a correr en esa CPU. Qu\'e proceso elegimos depende del algoritmo de scheduling.
 
@@ -155,9 +155,9 @@ Un scheduler puede ser \textbf{cooperativo (nonpreemptive)} o \textbf{con desalo
 
 Existen varias pol\'iticas de scheduling que son muy conocidas. A continuaci\'on veremos algunas de ellas.
 
-\subsubsection{First Come First Serve (FCFS)}
+\subsubsection{First Come First Served (FCFS)}
 
-El scheduler First Come First Serve (FCFS) es el m\'as sencillo de todos, aunque sin embargo no es de los m\'as \'utiles. Este scheduler consiste en simplemente asignarle la CPU a los procesos en el orden en el que van llegando sin preemption.
+El scheduler First Come First Served (FCFS) es el m\'as sencillo de todos, aunque sin embargo no es de los m\'as \'utiles. Este scheduler consiste en simplemente asignarle la CPU a los procesos en el orden en el que van llegando sin preemption.
 
 En un scheduler FCFS las tareas son desalojadas o bien porque termina su ejecuci\'on o bien porque solicitan entrada/salida. Podr\'ia pasarnos que una tarea que no solicita entrada salida llega primero y ejecuta por un tiempo muy largo, mientras que una segunda tarea tiene que esperar a que la primera termine para solicitar entrada/salida, dejando la CPU inutilizada una vez que esta segunda tarea es desalojada por el uso de entrada/salida.
 
@@ -214,11 +214,11 @@ v = registro2;
 
 Dando lugar a que si, por ejemplo, $v$ val\'ia 4 en un principio, pase a valer 3 en lugar de seguir valiendo 4 luego de ser incrementada y decrementada. A este problema se lo conoce como condici\'on de carrera.
 
-Esto puede ocurrir siempre que haya contenci\'on (varios procesos quieren acceder al mismo recurso) y concurrencia (dos o m\'as procesos se ejecutan en simultaneo, no necesariamente en paralelo).
+Esto puede ocurrir siempre que haya contenci\'on (varios procesos quieren acceder al mismo recurso) y concurrencia (dos o m\'as procesos se ejecutan en simult\'aneo, no necesariamente en paralelo).
 
 \subsection{Secci\'on cr\'itica}
 
-A veces un proceso tiene que ejecutar un bloque de c\'odigo que implica escribir parte de la memoria compartida o escribir un archivo. Esta parte del c\'odigo en la que el proceso no puede ejecutarse en simultaneo con otra parte de otro proceso que escriba las mismas variables o archivos se la conoce como secci\'on cr\'itica.
+A veces un proceso tiene que ejecutar un bloque de c\'odigo que implica escribir parte de la memoria compartida o escribir un archivo. Esta parte del c\'odigo en la que el proceso no puede ejecutarse en simult\'aneo con otra parte de otro proceso que escriba las mismas variables o archivos se la conoce como secci\'on cr\'itica.
 
 Cuando m\'as de un proceso tiene la secci\'on cr\'itica, s\'olo uno a la vez puede acceder a la misma al mismo tiempo. La soluci\'on al problema de la secci\'on cr\'itica tiene tres requerimientos:
 
@@ -422,7 +422,7 @@ P()
 }
 \end{code}
 
-Este ser\'ia el c\'odigo de cada uno de los procesos que necesitan esperar a los otros procesos para seguir con su ejecuci\'on. En este caso $count$ es una variable que cuenta cu\'antos procesos llegaron al punto del rendezvous, y empieza inicializada en cero, $barrier$ es un sem\'aforo que empieza inicializado en cero (la barrera), y $mutex$ es un mutex que proteje la variable $count$ y que empieza inicializado en 1.
+Este ser\'ia el c\'odigo de cada uno de los procesos que necesitan esperar a los otros procesos para seguir con su ejecuci\'on. En este caso $count$ es una variable que cuenta cu\'antos procesos llegaron al punto del rendezvous, y empieza inicializada en cero, $barrier$ es un sem\'aforo que empieza inicializado en cero (la barrera), y $mutex$ es un mutex que protege la variable $count$ y que empieza inicializado en 1.
 
 El sem\'aforo al que se le hace un signal inmediatamente despu\'es de un wait se lo denomina turnstile (molinete en ingl\'es) ya que sirve para que los procesos vayan pasando de a uno por ese punto.
 
@@ -497,7 +497,7 @@ En este caso, $items$ es un sem\'aforo que indica la cantidad de items en el buf
 
 \subsubsection{Read-Write Lock}
 
-Un problema de sincronizaci\'on muy com\'un aparece cuando tenemos varios procesos, algunos de los cuales quieren escribir una variable, y otros leerla. Puede haber varias lecturas en simultaneo, pero s\'olo una escritura a la vez, y nadie puede leer mientras alguien est\'a escribiendo. Una posible soluci\'on a este problema es la siguiente:
+Un problema de sincronizaci\'on muy com\'un aparece cuando tenemos varios procesos, algunos de los cuales quieren escribir una variable, y otros leerla. Puede haber varias lecturas en simult\'aneo, pero s\'olo una escritura a la vez, y nadie puede leer mientras alguien est\'a escribiendo. Una posible soluci\'on a este problema es la siguiente:
 
 \begin{code}
 writer()
@@ -725,15 +725,15 @@ Otra opci\'on, que tampoco es la mejor, es tener un directorio con un subdirecto
 
 \subsubsection{Tree Structured Directory}
 
-Los directorios pueden ser vistos tambi\'en como \'arboles. Existe un directorio al que llamamos root (o raiz, que es la raiz del \'arbol), y cada uno de los dem\'as directorio est\'a contenido en otro directorio, formando as\'i un \'arbol. Con esta estructura, cada directorio puede contener archivos y subdirectorios.
+Los directorios pueden ser vistos tambi\'en como \'arboles. Existe un directorio al que llamamos root (o ra\'iz, que es la ra\'iz del \'arbol), y cada uno de los dem\'as directorios est\'a contenido en otro directorio, formando as\'i un \'arbol. Con esta estructura, cada directorio puede contener archivos y subdirectorios.
 
-Cada archivo tiene un nombre y un path. El path es el camino en el \'arbol del directorio raiz hasta el directorio donde se encuentra el archivo. Podemos considerar al path seguido por el nombre del archivo como el nombre real del archivo para el sistema operativo. Por ejemplo, si el archivo se llama hola.txt y su path es /abc/def/ghi, entonces podemos considerar/abc/def/ghi/hola.txt como el nombre del archivo.
+Cada archivo tiene un nombre y un path. El path es el camino en el \'arbol del directorio ra\'iz hasta el directorio donde se encuentra el archivo. Podemos considerar al path seguido por el nombre del archivo como el nombre real del archivo para el sistema operativo. Por ejemplo, si el archivo se llama hola.txt y su path es /abc/def/ghi, entonces podemos considerar/abc/def/ghi/hola.txt como el nombre del archivo.
 
 Los directorios son considerados un tipo de archivo especial, cada entrada en la tabla del directorio (la que contiene la lista de archivos del directorio) tiene un bit que indica si el archivo que corresponde a esa entrada se trata de un directorio o si es otro tipo de archivo.
 
 \subsubsection{Acyclic Graph Directories}
 
-Otra opci\'on es mantener un grafo dirigido ac\'iclico (DAG, por sus siglas en ingl\'es) de directorios. Esto se logra agregandole a la versi\'on de \'arbol de directorios la posibilidad de tener links de un directorio a otro, haciendo que un archivo o directorio pueda estar en dos directorios al mismo tiempo.
+Otra opci\'on es mantener un grafo dirigido ac\'iclico (DAG, por sus siglas en ingl\'es) de directorios. Esto se logra agreg\'andole a la versi\'on de \'arbol de directorios la posibilidad de tener links de un directorio a otro, haciendo que un archivo o directorio pueda estar en dos directorios al mismo tiempo.
 
 Un problema que surge ahora es c\'omo recorrer los directorios, ya que no nos gustar\'ia recorrer dos veces el mismo directorio. Otro problema es cu\'ando borrar un archivo o directorio, la soluci\'on a esto es que cuando se borra un link no se borre el directorio original.
 
@@ -775,7 +775,7 @@ Una desventaja que tiene la FAT es que como toda la tabla tiene que estar en mem
 
 \subsubsection{i-nodos}
 
-Los i-nodos (index node) son estructuras de datos que continen los atributos de un archivo y links a los bloques en los que est\'a almacenado el archivo. La ventaja de los i-nodos sobre las tablas FAT es que los i-nodos (uno por archivo) s\'olo est\'an presentes en memoria cuando el archivo est\'a cargado en memoria, por lo que podemos tener un disco arbitrariamente grande que no vamos a tener que tener una cantidad proporcional de i-nodos cargados en memoria.
+Los i-nodos (index node) son estructuras de datos que contienen los atributos de un archivo y links a los bloques en los que est\'a almacenado el archivo. La ventaja de los i-nodos sobre las tablas FAT es que los i-nodos (uno por archivo) s\'olo est\'an presentes en memoria cuando el archivo est\'a cargado en memoria, por lo que podemos tener un disco arbitrariamente grande que no vamos a tener que tener una cantidad proporcional de i-nodos cargados en memoria.
 
 El problema surge cuando hay m\'as bloques que la capacidad de los i-nodos. Por ejemplo, si un archivo tiene 1000 bloques y un i-nodo tiene capacidad para direccionar a 512 bloques, entonces un i-nodo no va a servir en este caso. Para solucionar este problema, algunas implementaciones de i-nodos reservan las \'ultimas entradas para apuntar a bloques que a su vez apuntan a bloques del archivo.
 
@@ -822,7 +822,7 @@ Existen file systems para sistemas distribuidos, en donde un file system reside 
 
 \subsection{Drivers}
 
-Los dispositivos de entrada salida necesitan una forma de comunicarse con la CPU. Por ejemplo, un mouse necesita saber decirle al procesador que el usuario hizo un click o un desplazamiento hacia la derecha. Para esta comunicaci\'on existen m\'odulos de software muy espec\'ificos llamados drivers. Existen varias formas en las que los drivers pueden comunicarse con los dispositivos para saber cu\'ando los dispositivos terminaron de hacer algo (por ejemplo, cuando el usuario movio el mouse, cuando el disco termin\'o de escribir un archivo, o cu\'ando una impresora termin\'o de imprimir un documento). Veremos a continuaci\'on tres de estas formas.
+Los dispositivos de entrada salida necesitan una forma de comunicarse con la CPU. Por ejemplo, un mouse necesita saber decirle al procesador que el usuario hizo un click o un desplazamiento hacia la derecha. Para esta comunicaci\'on existen m\'odulos de software muy espec\'ificos llamados drivers. Existen varias formas en las que los drivers pueden comunicarse con los dispositivos para saber cu\'ando los dispositivos terminaron de hacer algo (por ejemplo, cu\'ando el usuario movi\'o el mouse, cu\'ando el disco termin\'o de escribir un archivo, o cu\'ando una impresora termin\'o de imprimir un documento). Veremos a continuaci\'on tres de estas formas.
 
 \subsubsection{Polling}
 
@@ -860,7 +860,7 @@ El tiempo necesario para que el disco rote y la cabeza quede sobre el sector des
 
 Existen varias pol\'iticas de scheduling de acceso a disco, algunas de las cuales optimizan el seek time para hacer los accesos a disco m\'as r\'apidos.
 
-\subsubsection{First Come First Serve}
+\subsubsection{First Come First Served}
 
 Esta pol\'itica es la m\'as simple, y consiste en atender los pedidos en el orden en el que van llegando. Si bien es la pol\'itica m\'as simple porque no requiere nada m\'as que guardar los pedidos en una cola FIFO, suele ser muy ineficiente.
 
@@ -906,10 +906,10 @@ Se suele hacer en cintas y hay tres tipos de backups que son los m\'as usados:
 
 \subsection{RAID}
 
-A veces hacer backup no alcanza, se puede romper un disco justo antes de hacer el backup y perdemos toda la informaci\'on desde el \'ultimo backup. Para evitar ese problema se suele utilizar RAID (Redundant Array of Inexpensive Disks). La idea b\'asicamente es copiar la informaci\'on en m\'as de un disco para que si se me rompe uno siga teniendo el otro. Tiene algunas ventajas como que puedo hacer lecturas en simultaneo de los dos discos pero es muy costoso escribir en dos discos a la vez. Adem\'as, tener dos copias de toda la informaci\'on puede requerir demasiado espacio en disco. Existen varios tipos de RAID que balancean todas estas ventajas y desventajas:
+A veces hacer backup no alcanza, se puede romper un disco justo antes de hacer el backup y perdemos toda la informaci\'on desde el \'ultimo backup. Para evitar ese problema se suele utilizar RAID (Redundant Array of Inexpensive Disks). La idea b\'asicamente es copiar la informaci\'on en m\'as de un disco para que si se me rompe uno siga teniendo el otro. Tiene algunas ventajas como que puedo hacer lecturas en simult\'aneo de los dos discos pero es muy costoso escribir en dos discos a la vez. Adem\'as, tener dos copias de toda la informaci\'on puede requerir demasiado espacio en disco. Existen varios tipos de RAID que balancean todas estas ventajas y desventajas:
 
 \begin{itemize}
-\item RAID 0 (stripping): No aporta redundancia. Consiste en tener la mitad de la informaci\'on en un disco y la mitad en otro. Permite escrituras en simultaneo si los discos est\'an en diferentes controladoras.
+\item RAID 0 (stripping): No aporta redundancia. Consiste en tener la mitad de la informaci\'on en un disco y la mitad en otro. Permite escrituras en simult\'aneo si los discos est\'an en diferentes controladoras.
 \item RAID 1 (mirroring): Se mantienen dos copias del mismo disco. Es costoso pero soporta la caida de un disco.
 \item RAID 0+1: Es un RAID 1 de dos RAID 0. El RAID 1 provee redundancia y el RAID 0 rendimiento. Es costoso al igual que RAID 1.
 \item RAID 1+0: Es un RAID 0 de dos RAID 1. Es mejor que RAID 0+1 ya que si se cae un disco en un RAID 0+1 todo el RAID 0 queda inutilizable, en cambio si se cae un disco en un RAID 1+0 s\'olo ese disco queda inutilizable. Si se caen dos discos en un RAID 0+1 la probabilidad de que todos los discos queden inutilizables es $\frac{2}{3}$ mientras que en un RAID 1+0 es $\frac{1}{3}$. Es igual de costoso que RAID 0+1.
@@ -933,7 +933,7 @@ Hay dispositivos que requieren acceso dedicado, como por ejemplo las impresoras.
 Existen tres conceptos que son similares pero no iguales:
 
 \begin{itemize}
-\item C\'omputo simult\'aneo: Un scheduler asigna un quantum a cada proceso. Los procesos se ejecutan simultaneamente.
+\item C\'omputo simult\'aneo: Un scheduler asigna un quantum a cada proceso. Los procesos se ejecutan simult\'aneamente.
 \item C\'omputo paralelo: M\'as de una CPU en una misma m\'aquina.
 \item C\'omputo distribuido: Varios procesadores que no comparten memoria, clock, etc.
 \end{itemize}
