@@ -557,7 +557,7 @@ Un algoritmo de prevensi\'on de deadlock, que implica conocer cu\'antos recursos
 
 \subsubsection{Algoritmo del banquero}
 
-El algoritmo del banquero es uno de los algoritmos m\'as famosos de prevenci\'on de deadlock. Este algoritmo consiste en asegurarse, cada vez que entra un proceso, de preguntarle cu\'antos recursos de cada tipo va a necesitar como m\'aximo, y s\'olo darle lugar a que se ejecute si, asignandole la m\'axima cantidad de recursos que necesita, se llega a un estado seguro.
+El algoritmo del banquero es uno de los algoritmos m\'as famosos de prevenci\'on de deadlock. Este algoritmo consiste en asegurarse, cada vez que entra un proceso, de preguntarle cu\'antos recursos de cada tipo va a necesitar como m\'aximo, y s\'olo darle lugar a que se ejecute si, asign\'andole la m\'axima cantidad de recursos que necesita, se llega a un estado seguro.
 
 \subsubsection{Detecci\'on de estados seguros}
 
@@ -576,7 +576,7 @@ Hasta ahora venimos hablando de estados seguros pero no dijimos todav\'ia c\'omo
 
 La memoria puede verse como una tira de bytes consecutivos. Cada uno de estos bytes tiene una direcci\'on (enteros consecutivos empezando desde el cero) mediante la cual se pueden acceder. Esta direcci\'on se denomina direcci\'on f\'isica.
 
-Cada vez que ejecutamos un proceso, este accede a memoria para cargar su c\'odigo, sus variables, y toda la dem\'as informaci\'on que necesite guardar. Si cada proceso decidiera utilizar direcciones espec\'ificas de la memoria, estar\'iamos en problemas cada vez que querramos cargar dos procesos que utilicen la misma direcci\'on de memoria, ya que por ejemplo, el c\'odigo de un proceso podr\'ia pisar variables del otro. Para resolver este problema tenemos la \textbf{Memory Management Unit (MMU)}, que es la unidad que se encarga de manejar la memoria. Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asignandole una porci\'on de la memoria f\'isica al proceso.
+Cada vez que ejecutamos un proceso, este accede a memoria para cargar su c\'odigo, sus variables, y toda la dem\'as informaci\'on que necesite guardar. Si cada proceso decidiera utilizar direcciones espec\'ificas de la memoria, estar\'iamos en problemas cada vez que querramos cargar dos procesos que utilicen la misma direcci\'on de memoria, ya que por ejemplo, el c\'odigo de un proceso podr\'ia pisar variables del otro. Para resolver este problema tenemos la \textbf{Memory Management Unit (MMU)}, que es la unidad que se encarga de manejar la memoria. Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asign\'andole una porci\'on de la memoria f\'isica al proceso.
 
 Cada proceso tiene su espacio de memoria y no puede acceder a memoria que no le corresponde. De esta manera evitamos que un proceso pueda acceder a memoria de otro proceso.
 
@@ -705,7 +705,7 @@ Un archivo generalmente tiene los siguientes atributos:
 Un archivo es una unidad de almacenamiento l\'ogica sobre la cu\'al se pueden realizar las siguientes operaciones:
 
 \begin{itemize}
-\item Crear un archivo: Primero se debe buscar espacio en el file system para el archivo, y luego se debe ubicar el archivo en el directorio correspondiente asignandole un nombre.
+\item Crear un archivo: Primero se debe buscar espacio en el file system para el archivo, y luego se debe ubicar el archivo en el directorio correspondiente asign\'andole un nombre.
 \item Escribir un archivo: Para escribir un archivo se debe invocar una system call del sistema operativo indicando el nombre del archivo y el contenido que se desea escribir. Dado el nombre del archivo, el sistema operativo debe buscar el directorio donde se encuentra para ubicar el archivo en el file system.
 \item Leer un archivo: Para leer un archivo debemos usar una system call especificandole el nombre del archivo y d\'onde queremos que cargue el archivo en memoria.
 \item Borrar un archivo: Hay que buscar el archivo en el directorio correspondiente, liberar el espacio que ocupa el archivo y borrar la entrada correspondiente a ese archivo en el directorio.
