@@ -109,9 +109,9 @@ La implementaci\'on de Unix (y por lo tanto de Linux) del intercambio de mensaje
 
 \subsection{¿Qu\'e es un thread?}
 
-Hasta ahora estudiamos a los procesos como un \'unico hilo de ejecuci\'on que se ejecuta en una CPU. Los threads nos permiten separar los procesos en varios hilos de ejecuci\'on que pueden correr en simult\'aneo en distintas CPUs. Un thread es una unidad b\'asica de ejecuci\'on que tiene su propio \textbf{tid (thread id)}, que sirve para identificarlo de la misma manera que el pid identifica a un proceso, su propio estado del set de registros de la CPU, y su propia \'area de stack en memoria. Todos los dem\'as recursos como lo son por ejemplo la secci\'on de c\'odigo o datos en memoria, los archivos abiertos, o los dispositivos de entrada/salida con los que se comunica el thread, con compartidos con todos los threads del mismo proceso.
+Hasta ahora estudiamos a los procesos como un \'unico hilo de ejecuci\'on que se ejecuta en una CPU. Los threads nos permiten separar los procesos en varios hilos de ejecuci\'on que pueden correr en simult\'aneo en distintas CPUs. Un thread es una unidad b\'asica de ejecuci\'on que tiene su propio \textbf{tid (thread id)}, que sirve para identificarlo de la misma manera que el pid identifica a un proceso, su propio estado del set de registros de la CPU, y su propia \'area de stack en memoria. Todos los dem\'as recursos como lo son por ejemplo la secci\'on de c\'odigo o datos en memoria, los archivos abiertos, o los dispositivos de entrada/salida con los que se comunica el thread, son compartidos con todos los threads del mismo proceso.
 
-Algunas de las ventajas del uso de threads son
+Algunas de las ventajas del uso de threads son:
 
 \begin{itemize}
 \item Cuando un proceso con un s\'olo thread est\'a a la espera de una operaci\'on bloqueante como puede ser la comunicaci\'on con un dispositivo de entrada/salida, un proceso con muchos threads puede tener un s\'olo thread bloqueado mientras que los dem\'as threads siguen ejecut\'andose sin tener que esperar.
@@ -159,19 +159,19 @@ Existen varias pol\'iticas de scheduling que son muy conocidas. A continuaci\'on
 
 El scheduler First Come First Served (FCFS) es el m\'as sencillo de todos, aunque sin embargo no es de los m\'as \'utiles. Este scheduler consiste en simplemente asignarle la CPU a los procesos en el orden en el que van llegando sin preemption.
 
-En un scheduler FCFS las tareas son desalojadas o bien porque termina su ejecuci\'on o bien porque solicitan entrada/salida. Podr\'ia pasarnos que una tarea que no solicita entrada salida llega primero y ejecuta por un tiempo muy largo, mientras que una segunda tarea tiene que esperar a que la primera termine para solicitar entrada/salida, dejando la CPU inutilizada una vez que esta segunda tarea es desalojada por el uso de entrada/salida.
+En un scheduler FCFS las tareas son desalojadas o bien porque termina su ejecuci\'on o bien porque solicitan entrada/salida. Podr\'ia pasarnos que una tarea que no solicita entrada/salida llega primero y ejecuta por un tiempo muy largo, mientras que una segunda tarea tiene que esperar a que la primera termine para solicitar entrada/salida, dejando la CPU inutilizada una vez que esta segunda tarea es desalojada por el uso de entrada/salida.
 
 \subsubsection{Shortest Job First (SJF)}
 
-El scheduler Shortest Job First le asigna la CPU siempre al proceso cuyo tiempo de ejecuci\'on es menor. Esta pol\'itica es muy buena en muchos casos aunque imposible de llevar a la pr\'actica ya que es imposible saber cu\'anto tiempo va a llevarle a un determinado proceso ejecutar.
+El scheduler Shortest Job First le asigna la CPU siempre al proceso cuyo tiempo de ejecuci\'on es menor. Esta pol\'itica es muy buena en muchos casos aunque imposible de llevar a la pr\'actica ya que no se puede saber cu\'anto tiempo va a llevarle a un determinado proceso ejecutar.
 
 Un scheduler SJF puede ser tanto preemptive como nonpreemptive. En el caso del scheduler SJF con preemption, cuando llega un proceso a la cola de procesos listos, s\'olo reemplaza al proceso actual si su tiempo de ejecuci\'on es menor al tiempo de ejecuci\'on restante del proceso actual.
 
 \subsubsection{Priority Scheduling}
 
-El caso de SJF es un caso de scheduler con prioridades. En un scheduler con prioridades se definen las prioridades de cada proceso y ejecuta el proceso con mayor prioridad en cada paso. En el caso de SJF la prioridad est\'a dada por el tiempo restante de ejecuci\'on de un proceso.
+En un scheduler con prioridades se definen las prioridades de cada proceso y ejecuta el proceso con mayor prioridad en cada paso. En el caso de SJF la prioridad est\'a dada por el tiempo restante de ejecuci\'on de un proceso, por lo que puede ser visto tambi\'en como un scheduler con prioridades.
 
-Este tipo de schedulers puede dar lugar a lo que se conoce como \textbf{starvation (o inanici\'on)}, un escenario donde a un proceso nunca le es asignada una dosis de CPU. Una soluci\'on posible a este problema es ir reduciendo la prioridad de cada proceso a medida que va ejecutando, para que eventualmente todos los procesos terminen ejecut\'andose. Aunque esta soluci\'on es parcial, ya que podr\'ian llegar todo el tiempo procesos nuevos con alta prioridad y dejar sin ejecutar a un proceso de baja prioridad.
+Este tipo de schedulers puede dar lugar a lo que se conoce como \textbf{starvation (o inanici\'on)}, un escenario donde a un proceso nunca le es asignado tiempo de CPU. Una soluci\'on posible a este problema es ir reduciendo la prioridad de cada proceso a medida que va ejecutando, para que eventualmente todos los procesos terminen ejecut\'andose. Aunque esta soluci\'on es parcial, ya que podr\'ian llegar todo el tiempo procesos nuevos con alta prioridad y dejar sin ejecutar a un proceso de baja prioridad.
 
 \subsubsection{Round Robin}
 
