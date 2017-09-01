@@ -55,7 +55,7 @@ Leopoldo \textsc{Taravilse}
 \newpage
 \section{Procesos}
 
-\subsection{¿Qu\'e es un proceso?}
+\subsection{Â¿Qu\'e es un proceso?}
 
 Un proceso es un programa en ejecuci\'on. El proceso incluye no s\'olo el c\'odigo del programa sino tambi\'en el estado de los registros, la memoria que utiliza el proceso y todos los dem\'as recursos que utiliza durante su ejecuci\'on.
 
@@ -101,13 +101,13 @@ Para que los procesos se comuniquen mediante el uso de memoria compartida, estos
 
 En Linux un espacio de memoria compartida se reserva mediante la system call $shmget$, mientras que se accede con la system call $shmat$. Para dejar de utilizar el espacio de memoria compartida se debe llamar a la system call $shmdt$ mientras que para liberar la memoria se utiliza la system call $shmctl$.
 
-Para comunicar dos procesos mediante el intercambio de mensajes, se debe establecer una conexi\'on que permita dos operaciones b\'asicas: send y recieve. Existen a su vez dos tipos de send y dos tipos de receive: bloqueante y no bloqueante. Un send bloqueante espera a que la otra parte reciba el mensaje, mientras que un receive bloqueante espera a que la otra parte reciba el mensaje. En el caso del send y el receive no bloqueantes, simplemente hacen su tarea (enviar o recibir un mensaje) y el proceso sigue con su ejecuci\'on normalmente sin esperar nada del otro lado.
+Para comunicar dos procesos mediante el intercambio de mensajes, se debe establecer una conexi\'on que permita dos operaciones b\'asicas: send y receive. Existen a su vez dos tipos de send y dos tipos de receive: bloqueante y no bloqueante. Un send bloqueante espera a que la otra parte reciba el mensaje, mientras que un receive bloqueante espera a que la otra parte envie el mensaje. En el caso del send y el receive no bloqueantes, simplemente hacen su tarea (enviar o recibir un mensaje) y el proceso sigue con su ejecuci\'on normalmente sin esperar nada del otro lado.
 
 La implementaci\'on de Unix (y por lo tanto de Linux) del intercambio de mensajes es mediante sockets. Los sockets se pueden ver como extremos en una comunicaci\'on. Una vez creados los sockets, se puede escribir y leer como si fuesen un dispositivo de entrada/salida.
 
 \section{Threads}
 
-\subsection{¿Qu\'e es un thread?}
+\subsection{Â¿Qu\'e es un thread?}
 
 Hasta ahora estudiamos a los procesos como un \'unico hilo de ejecuci\'on que se ejecuta en una CPU. Los threads nos permiten separar los procesos en varios hilos de ejecuci\'on que pueden correr en simult\'aneo en distintas CPUs. Un thread es una unidad b\'asica de ejecuci\'on que tiene su propio \textbf{tid (thread id)}, que sirve para identificarlo de la misma manera que el pid identifica a un proceso, su propio estado del set de registros de la CPU, y su propia \'area de stack en memoria. Todos los dem\'as recursos como lo son por ejemplo la secci\'on de c\'odigo o datos en memoria, los archivos abiertos, o los dispositivos de entrada/salida con los que se comunica el thread, con compartidos con todos los threads del mismo proceso.
 
@@ -248,9 +248,9 @@ do{
     flag[i] = true;
 		turn = j;
 		while(flag[j] && turn == j);
-		//sección crítica
+		//secciÃ³n crÃ­tica
 		flag[i] = false;
-		//sección no crítica
+		//secciÃ³n no crÃ­tica
 }while(true);
 \end{code}
 
@@ -284,9 +284,9 @@ bool lock // variable global compartida por todos los procesos
 while(true)
 {
     while(TestAndSet(&lock));
-		//sección crítica
+		//secciÃ³n crÃ­tica
 		lock = false;
-		// sección no crítica
+		// secciÃ³n no crÃ­tica
 }
 \end{code}
 
@@ -435,7 +435,7 @@ P()
 {
     while(condicion)
 		{
-		    //instrucciones previas a la sección crítica
+		    //instrucciones previas a la secciÃ³n crÃ­tica
 		    mutex.wait();
 				    count++;
 						if(count==n)
@@ -446,7 +446,7 @@ P()
 				mutex.signal();
 				turnstile.wait();
 				turnstile.signal();
-				//sección crítica
+				//secciÃ³n crÃ­tica
 				mutex.wait();
 				    count--;
 						if(count==0)
@@ -457,7 +457,7 @@ P()
 				mutex.signal();
 				turnstile2.wait();
 				turnstile2.signal();
-				//instrucciones posteriores a la sección crítica
+				//instrucciones posteriores a la secciÃ³n crÃ­tica
 		}
 }
 \end{code}
@@ -504,7 +504,7 @@ writer()
 {
     turnstile.wait();
 		    roomEmpty.wait();
-				//sección crítica
+				//secciÃ³n crÃ­tica
 		turnstile.signal();
 		roomEmpty.signal();
 }
@@ -517,7 +517,7 @@ reader()
 				if(count==1)
 				    roomEmpty.wait();
 		mutex.signal();
-		//sección crítica
+		//secciÃ³n crÃ­tica
 		mutex.wait();
 		    count--;
 				if(count==0)
@@ -743,7 +743,7 @@ Otra opci\'on que tenemos es agregar links y que el grafo ya no tenga porqu\'e s
 
 \section{File systems}
 
-\subsection{¿Qu\'e es un file system?}
+\subsection{Â¿Qu\'e es un file system?}
 
 Los file systems (o sistemas de archivos) son los encargados de darle forma al contenido de un disco, y de organizar los archivos que hay en el mismo. Los discos est\'an divididos en sectores. El sector 0 de un disco se denomina \textbf{Master Boot Record (MBR)} y es la parte del disco que se ejecuta al prender una computadora.
 
@@ -928,7 +928,7 @@ Hay dispositivos que requieren acceso dedicado, como por ejemplo las impresoras.
 
 \section{Sistemas distribuidos}
 
-\subsection{¿Qu\'e son los sistemas distribuidos?}
+\subsection{Â¿Qu\'e son los sistemas distribuidos?}
 
 Existen tres conceptos que son similares pero no iguales:
 
@@ -981,7 +981,7 @@ La conjetura de Brewer dice que en un entorno distribuido s\'olo se pueden garan
 
 \subsection{Locks en sistemas distribuidos}
 
-En sistemas distribuidos no hay TestAndSet at\'omicos, entonces, ¿c\'omo implementamos los locks?. Una de las soluciones m\'as sencillas es designar un nodo para que se encargue de administrar los recursos, y crear procesos en ese nodo (proxies) que representen a los procesos remotos, teniendo que pedirle los procesos remotos a los proxies que negocien los recursos por ellos.
+En sistemas distribuidos no hay TestAndSet at\'omicos, entonces, Â¿c\'omo implementamos los locks?. Una de las soluciones m\'as sencillas es designar un nodo para que se encargue de administrar los recursos, y crear procesos en ese nodo (proxies) que representen a los procesos remotos, teniendo que pedirle los procesos remotos a los proxies que negocien los recursos por ellos.
 
 Este enfoque centralizado tiene varios problemas. Uno de ellos es el cuello de botella. Otro problema es que ante la falla del servidor se cae todo el sistema.
 
