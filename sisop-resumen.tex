@@ -553,7 +553,7 @@ S\'olo puede ocurrir deadlock cuando se cumplen las siguientes cuatro condicione
 
 Un estado se dice seguro, si podemos enumerar los procesos que est\'an corriendo actualmente $P_1,P_2,\dots,P_n$ de modo tal de que $P_1$ tiene disponibles todos los recursos que necesita terminar, y para todo $i > 1$ se cumple que entre los recursos disponibles y los recursos que tienen tomados los procesos $P_1,\dots,P_{i-1}$ tiene todos los recursos que necesita para terminar.
 
-Un algoritmo de prevensi\'on de deadlock, que implica conocer cu\'antos recursos de cada tipo va a necesitar cada proceso de antemano, consiste en s\'olo asignar recursos a los procesos si la asignaci\'on lleva a un estado seguro.
+Un algoritmo de prevenci\'on de deadlock, que implica conocer cu\'antos recursos de cada tipo va a necesitar cada proceso de antemano, consiste en s\'olo asignar recursos a los procesos si la asignaci\'on lleva a un estado seguro.
 
 \subsubsection{Algoritmo del banquero}
 
@@ -594,7 +594,7 @@ Cuando hacemos swapping, o tambi\'en cuando cargamos procesos en memoria y cuand
 \item First fit: En el primer bloque de memoria libre en el que entre el fragmento.
 \item Best fit: En el bloque de memoria libre m\'as chico en el que entre el fragmento.
 \item Worst fit: En el bloque de memoria libre m\'as grande.
-\item Quick Fit: Se mantiene una lista de bloques libres de los tama\~nos m\'as comunes. Por ejemplo, se mantiene la lista de los bloques de 4KB, de 8KB, de 12KB... Un bloque de 5KB puede ir a la lista de bloques de 4KB. De esta manera se puede hacer por ejemplo first fit en la lista que corresponda.
+\item Quick Fit: Se mantiene una lista de bloques libres de los tama\~nos m\'as comunes. Por ejemplo, se mantiene la lista de los bloques de 4KB, de 8KB, de 12KB, etc. Un bloque libre de 5KB puede ir a la lista de bloques de 4KB, de esta manera se puede hacer por ejemplo first fit en la lista que corresponda.
 \end{itemize}
 
 Existen dos m\'etodos que son los m\'as comunes para almacenar la informaci\'on sobre los bloques libres y ocupados de la memoria. Uno de ellos son los bitmaps y el otro las listas enlazadas.
@@ -646,11 +646,11 @@ Las tablas de p\'aginas suelen guardar dos bits R y M que indican si la p\'agina
 \item Referenciadas y modificadas.
 \end{enumerate}
 
-El algoritmo Not Recently Used (NRU) desaloja de memoria una p\'agina al azar de la categor\'ia m\'as baja en la que haya al menos una p\'agina. La idea es que las p\'aginas que fueron referenciadas recientemente son m\'as propensas a ser referenciadas nuevamente, y para desempatar, es siempre m\'as costoso desalojar una p\'agina modificada, ya que hay que cargarla a disco.
+El algoritmo Not Recently Used (NRU) desaloja de memoria una p\'agina al azar de la categor\'ia m\'as baja en la que haya al menos una p\'agina. La idea es que las p\'aginas que fueron referenciadas recientemente son m\'as propensas a ser referenciadas nuevamente, y para desempatar, es siempre m\'as costoso desalojar una p\'agina modificada, ya que hay que guardarla a disco.
 
 \subsubsection{First In First Out}
 
-El algoritmo FIFO consiste en desalojar siempre la p\'agina que fue cargada en memoria primera entre todas las p\'aginas que est\'an cargadas en memoria. Es uno de los m\'as sencillos pero es bastante ineficiente ya que puede ser que una p\'agina cargada hace mucho tiempo sea una de las m\'as utilizadas.
+El algoritmo FIFO consiste en desalojar siempre la p\'agina que fue cargada hace m\'as tiempo entre todas las p\'aginas que est\'an cargadas en memoria, es decir aquella que fue cargada primera. Es uno de los m\'as sencillos pero es bastante ineficiente ya que puede ser que una p\'agina cargada hace mucho tiempo sea una de las m\'as utilizadas.
 
 \subsubsection{Second Chance}
 
@@ -658,7 +658,7 @@ Second Chance es parecido a FIFO, pero difiere en que revisa el bit R de la p\'a
 
 \subsubsection{Clock}
 
-Es muy parecido a Second Chance, pero en vez de guardar una cola, guarda una lista circular, y mueve un puntero a lo largo de la lista. Si una p\'agina tiene el bit R en 1 entonces avanza el puntero a la pr\'oxima posici\'on de la lista, y cuando encuentra una p\'agina con el bit R en 0, entonces la cambia por la nueva p\'agina y avanza tambi\'en el puntero.
+Es muy parecido a Second Chance, pero en vez de guardar una cola, guarda una lista circular, y mueve un puntero a lo largo de la lista. Si una p\'agina tiene el bit R en 1 entonces avanza el puntero a la pr\'oxima posici\'on de la lista. Si encuentra una p\'agina con el bit R en 0, entonces la desaloja y avanza el puntero.
 
 \subsubsection{Least Recently Used}
 
@@ -900,8 +900,8 @@ Se suele hacer en cintas y hay tres tipos de backups que son los m\'as usados:
 
 \begin{itemize}
 \item Copias totales: Se copia toda la informaci\'on del disco.
-\item Copias incrementales: Se copian todos los archivos modificados desde la \'ultima copia total o incremental.
 \item Copias diferenciales: Se copian todos los archivos modificados desde la \'ultima copia total.		
+\item Copias incrementales: Se copian todos los archivos modificados desde la \'ultima copia total o incremental.
 \end{itemize}
 
 \subsection{RAID}
