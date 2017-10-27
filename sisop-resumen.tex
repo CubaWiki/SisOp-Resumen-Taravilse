@@ -94,8 +94,6 @@ Todos los procesos est\'an representados en el sistema operativos por su \textbf
 
 Cada proceso es un\'ivocamente identificado por su \textbf{pid (process id)}.
 
-Cuando un proceso que est\'a ejecut\'andose en una CPU es desalojado de la misma para dar lugar a que se ejecute otro proceso, se produce lo que se conoce como cambio de contexto. El cambio de contexto consiste, entre otras cosas, en guardar la informaci\'on del proceso saliente en su PCB, y cargar la del proceso entrante desde su PCB. El cambio de contexto siempre consume tiempo del procesador en el cu\'al nada util ocurre en ning\'un proceso, y por lo tanto es deseable que ocurra suficientemente poco, para no desperdiciar tanto tiempo, pero a su vez, suficientemente seguido, como para que ning\'un proceso se apropie de la CPU por mucho tiempo.
-
 \subsection{Creando procesos}
 
 Un proceso puede crear otros procesos. Si un proceso $A$ crea un proceso $B$ decimos que $A$ es el proceso padre, y $B$ es el proceso hijo.
@@ -149,6 +147,8 @@ Si bien los threads comparten la memoria del proceso al cual pertenecen, es posi
 
 Cuando m\'as de un proceso corre en simult\'aneo, es necesario decidir cu\'ando y cu\'anto tiempo corre cada proceso (o thread). Los algoritmos que determinan cu\'ando se desaloja un proceso o thread de una determinada CPU, dando lugar a otro proceso o thread para que corra se llaman algoritmos de scheduling. De ahora en m\'as hablaremos de scheduling de procesos, aunque todo lo que digamos es tambi\'en v\'alido para threads.
 
+Cuando un proceso que est\'a ejecut\'andose en una CPU es desalojado de la misma para dar lugar a que se ejecute otro proceso, se produce lo que se conoce como cambio de contexto. El cambio de contexto consiste, entre otras cosas, en guardar la informaci\'on del proceso saliente en su PCB, y cargar la del proceso entrante desde su PCB. El cambio de contexto siempre consume tiempo del procesador en el cu\'al nada util ocurre en ning\'un proceso, y por lo tanto es deseable que ocurra suficientemente poco, para no desperdiciar tanto tiempo, pero a su vez, suficientemente seguido, como para que ning\'un proceso se apropie de la CPU por mucho tiempo.
+
 Cuando una CPU se libera, es necesario decidir qu\'e proceso empieza a correr en esa CPU. Qu\'e proceso elegimos depende del algoritmo de scheduling.
 
 La pol\'itica de scheduling debe estar definida en funci\'on de optimizar alguna combinaci\'on de los siguientes objetivos (algunos de los cuales son contradictorios)
@@ -193,6 +193,19 @@ Este tipo de schedulers puede dar lugar a lo que se conoce como \textbf{starvati
 El scheduler Round Robin es parecido al FCFS pero con preemption. Se le agrega lo que se denomina \textbf{quantum}, que es una unidad de tiempo tras el cual el proceso que corre en una CPU es desalojado y es insertado al final de la cola de procesos ready. El quantum suele ser de entre 10 y 100 milisegundos.
 
 En un scheduler Round Robin, si el quantum es muy grande, va a parecerse mucho a un FCFS, en cambio si es muy chico, va a haber mucha p\'erdida de tiempo en los cambios de contexto, por lo cual es muy importante saber elegir el quantum apropiado.
+
+\subsubsection{Multilevel Queue Scheduling}
+Este scheduler divide la cola ready en varias colas, las cuales cada una puede utilizar un algoritmo de scheduling distinto. A su vez, hay un algoritmo que realiza scheduling entre las distintas colas, este algoritmo suele ser de prioridades fijas y con desalojo. Una vez que un proceso es ingresado en una de las colas permanece en la misma hasta que finaliza. 
+
+Por ejemplo, podría darse el caso de tener una configuración con 3 colas, cada una correspondiendo a prioridades de procesos alta, media y baja. Podríamos entonces asignar un scheduler Round Robin como scheduler de colas, asignando un quantum mas alto para las colas de prioridades mas altas y un scheduler de prioridad con aging para cada una de las colas.
+
+\subsubsection{Multilevel Feedback Queue Scheduling}
+Es igual al anterior pero ahora los procesos tienen permitido mudarse entre colas de distintas prioridades. La idea es que si un proceso esta utilizando mucho CPU termine en las colas con prioridades mas bajas, dándole mas importancia a procesos interactivos o con mucho tiempo de espera I/O. Suele implementarse con aging, de forma tal de evitar inanición de procesos que terminan en las colas de prioridad mas bajas.
+
+\subsubsection{Real-time Scheduling}
+Este tipo de schedulers sirven su propósito para sistemas en donde las tareas tienen un deadline estricto. En este tipo de sistemas las tareas son consideradas periódicas en el sentido que requieren utilizar la CPU cada $p$ unidades de tiempo (su periodo).
+
+A modo de ejemplo, existe el Rate-Monotonic Scheduler, que es un priority scheduler donde la prioridad esta definida por la frecuencia de ejecución como $1/p$. A menor periodo, mayor prioridad. También existe el Earliest-Deadline-First Scheduling, en donde se usa el deadline mas próximo como prioridad del scheduler. Este scheduler sigue la idea de que toda tarea debe terminar antes de su deadline.
 
 \subsubsection{Scheduling con m\'ultiples procesadores}
 
