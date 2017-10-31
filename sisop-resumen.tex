@@ -251,9 +251,9 @@ A veces un proceso tiene que ejecutar un bloque de c\'odigo que implica escribir
 Cuando m\'as de un proceso tiene la secci\'on cr\'itica, s\'olo uno a la vez puede acceder a la misma al mismo tiempo. La soluci\'on al problema de la secci\'on cr\'itica tiene tres requerimientos:
 
 \begin{itemize}
-\item Exclusi\'on mutua: Si un proceso entra a su secci\'on cr\'itica, ning\'un otro proceso puede estar en su secci\'on cr\'itica.
-\item Progreso: Si ning\'un proceso est\'a ejecutando su secci\'on cr\'itica y algunos procesos quieren entrar en su secci\'on cr\'itica, s\'olo uno puede hacerlo y la decisi\'on de qu\'e proceso entra en su secci\'on cr\'itica no puede ser postpuesta indefinidamente.
-\item Espera acotada: Existe un l\'imite de cu\'antas veces pueden entrar otros procesos a sus secciones cr\'iticas antes que un proceso pueda entrar a la suya una vez que el proceso pidi\'o entrar en su secci\'on cr\'itica.
+\item Exclusión mutua (mutual exclusion): Por cada sección critica solo puede existir un proceso que este ejecutandose en la misma.
+\item Progreso (freedom from deadlock): La decisi\'on de qu\'e proceso entra en una secci\'on cr\'itica no puede ser postpuesta indefinidamente. Dicho de otra manera, cuando un proceso pide acceso a una sección critica, ese acceso debe ser otorgado en un periodo de tiempo acotado.
+\item Espera acotada (freedom from starvation): Existe un l\'imite de cu\'antas veces pueden entrar otros procesos a una sección cr\'itica antes de que un proceso que solicitó la entrada pueda hacerlo.
 \end{itemize}
 
 \subsubsection{Soluci\'on de Peterson al problema de la secci\'on cr\'itica}
