@@ -326,28 +326,11 @@ En los casos de la soluci\'on de Peterson y de la implementaci\'on de locks con 
 
 Ser\'ia de mucha utilidad tener la posibilidad de tener una variable $lock$ y pedirle al procesador que contin\'ue con la secci\'on cr\'itica s\'olo cuando \'esta tome un determinado valor. Afortunadamente, no somos los primeros a los que se nos ocurre esta idea, sino que ya \textbf{Dijkstra} (si, en negrita porque es Dijkstra) pens\'o en este problema e implement\'o una soluci\'on que conocemos como \textbf{sem\'aforos}.
 
-Un sem\'aforo es una variable entera, que toma valores no negativos, que es inicializada con un valor elegido por el programador, y que luego de ser inicializada s\'olo puede ser accedida mediante dos funciones: \textbf{wait} y \textbf{signal}. Estas funciones son operaciones at\'omicas y su ejecuci\'on es similar a la de los siguientes c\'odigos:
-
-\begin{code}
-wait(S)
-{
-    while(S<=0);
-		S--;
-}
-\end{code}
-
-\begin{code}
-signal(S)
-{
-    S++;
-}
-\end{code}
-
-Existen dos tipos distintos de sem\'aforos. Uno de ellos son los sem\'aforos que pueden tomar cualquier valor no negativo, mientras que los otros s\'olo pueden tomar dos valores: 0 y 1. Estos \'ultimos son conocidos como sem\'aforos binarios o \textbf{mutex}.
+Un sem\'aforo es una variable entera, inicializada con un valor arbitrario, y que luego de ser inicializada s\'olo puede ser accedida mediante dos funciones atómicas: \textbf{wait} y \textbf{signal}. Los semáforos que s\'olo pueden tomar valores entre 0 y 1, son conocidos como sem\'aforos binarios o \textbf{mutex}.
 
 Los mutex pueden ser utilizados por ejemplo para resolver el problema de la secci\'on cr\'itica. Cuando el mutex tiene el valor 1 y un proceso hace un wait, dej\'andolo en 0, se dice que el proceso toma el mutex. Al hacer un signal de un mutex que est\'a en 0, se dice que el proceso libera el mutex. Para resolver el problema de la secci\'on cr\'itica es necesario tener un mutex inicializado en 1, luego cada proceso que quiere entrar en su secci\'on cr\'itica debe tomar el mutex para entrar, y liberarlo al salir de la secci\'on cr\'itica. De este modo, no puede haber m\'as de un proceso a la vez en la secci\'on cr\'itica.
 
-Para evitar el busy waiting, los sem\'aforos se implementan de la siguiente manera: Adem\'as del valor del sem\'aforo, se guarda una lista de procesos en espera. Cada vez que un proceso hace un wait, si tiene que esperar a que el valor del sem\'aforo sea mayor a cero, libera la CPU en la que est\'a corriendo, pasando a la lista de espera asociada al sem\'aforo que pidi\'o. Este proceso no es agregado a la cola de procesos ready sino que, al hacer un signal, el primer proceso en la lista de espera (que funciona como una cola), es pasado a la cola de procesos ready. De esta manera la implementaci\'on de los sem\'aforos ser\'ia la siguiente:
+La diferencia principal entre los semáforos y TAS es el mecanismo que poseen para evitar busy waiting: adem\'as del valor del sem\'aforo, se guarda una lista de procesos en espera. Cada vez que un proceso hace un wait, si tiene que esperar a que el valor del sem\'aforo sea mayor a cero, libera la CPU en la que est\'a corriendo, pasando a la lista de espera asociada al sem\'aforo que pidi\'o. Este proceso no es agregado a la cola de procesos ready sino que, al hacer un signal, el siguiente proceso en la lista de espera, es pasado a la cola de procesos ready. De esta manera la implementaci\'on de los sem\'aforos ser\'ia la siguiente:
 
 \begin{code}
 struct semaphore{
@@ -356,11 +339,12 @@ struct semaphore{
 };
 \end{code}
 
+\newpage
 \begin{code}
 wait(semaphore *S)
 {
     S->value--;
-		if(S->value<0)
+		if(S->value < 0)
 		{
 		    S->list.add(thisProcess);
 				block();
@@ -372,10 +356,10 @@ wait(semaphore *S)
 signal(semaphore *S)
 {
     S->value++;
-		if(S->value<=0)
+		if(S->value <= 0)
 		{
-		    remove process P from S->list;
-				wakeUp(P);
+		    process* p = S->list.pop();
+		    wakeUp(p);
 		}
 }
 \end{code}
