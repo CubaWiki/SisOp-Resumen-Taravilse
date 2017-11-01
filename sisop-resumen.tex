@@ -451,7 +451,7 @@ P()
 		    //instrucciones previas a la sección crítica
 		    mutex.wait();
 				    count++;
-						if(count==n)
+						if (count == n)
 						{
 						    turnstile2.wait();
 								turnstile.signal();
@@ -459,10 +459,12 @@ P()
 				mutex.signal();
 				turnstile.wait();
 				turnstile.signal();
+				
 				//sección crítica
+				
 				mutex.wait();
 				    count--;
-						if(count==0)
+						if (count == 0)
 						{
 						    turnstile.wait();
 								turnstile2.signal();
@@ -527,13 +529,13 @@ reader()
 		turnstile.signal();
 		mutex.wait();
 		    count++;
-				if(count==1)
+				if (count == 1)
 				    roomEmpty.wait();
 		mutex.signal();
 		//sección crítica
 		mutex.wait();
 		    count--;
-				if(count==0)
+				if (count == 0)
 				    roomEmpty.signal();
 	  mutex.signal();
 }
@@ -587,7 +589,7 @@ Hasta ahora venimos hablando de estados seguros pero no dijimos todav\'ia c\'omo
 
 La memoria puede verse como una tira de bytes consecutivos. Cada uno de estos bytes tiene una direcci\'on (enteros consecutivos empezando desde el cero) mediante la cual se pueden acceder. Esta direcci\'on se denomina direcci\'on f\'isica.
 
-Cada vez que ejecutamos un proceso, este accede a memoria para cargar su c\'odigo, sus variables, y toda la dem\'as informaci\'on que necesite guardar. Si cada proceso decidiera utilizar direcciones espec\'ificas de la memoria, estar\'iamos en problemas cada vez que querramos cargar dos procesos que utilicen la misma direcci\'on de memoria, ya que por ejemplo, el c\'odigo de un proceso podr\'ia pisar variables del otro. Para resolver este problema tenemos la \textbf{Memory Management Unit (MMU)}, que es la unidad que se encarga de manejar la memoria. Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asign\'andole una porci\'on de la memoria f\'isica al proceso.
+Cada vez que ejecutamos un proceso, este accede a memoria para cargar su c\'odigo, sus variables, y toda la informaci\'on restante que necesite guardar. Si cada proceso decidiera utilizar direcciones espec\'ificas de la memoria, estar\'iamos en problemas cada vez que querramos cargar dos procesos que utilicen la misma direcci\'on de memoria, ya que por ejemplo, el c\'odigo de un proceso podr\'ia pisar variables del otro. Para resolver este problema tenemos la \textbf{Memory Management Unit (MMU)}, que es la unidad que se encarga de manejar la memoria. Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asign\'andole una porci\'on de la memoria f\'isica al proceso.
 
 Cada proceso tiene su espacio de memoria y no puede acceder a memoria que no le corresponde. De esta manera evitamos que un proceso pueda acceder a memoria de otro proceso.
 
