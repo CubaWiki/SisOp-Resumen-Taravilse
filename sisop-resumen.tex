@@ -424,13 +424,14 @@ P()
 {
     //instrucciones previas al rendezvous
     mutex.wait();
-		    count++;
-				if(count==n)
-				    barrier.signal();
-		mutex.signal();
-		barrier.wait();
-		barrier.signal();
-		//instrucciones posteriores al rendezvous
+    count++;
+    if (count == n)
+        barrier.signal();
+    mutex.signal();
+    
+    barrier.wait();
+    barrier.signal();
+    //instrucciones posteriores al rendezvous
 }
 \end{code}
 
