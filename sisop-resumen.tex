@@ -563,9 +563,7 @@ S\'olo puede ocurrir deadlock cuando se cumplen las siguientes cuatro condicione
 
 \subsubsection{Estados seguros}
 
-Un estado se dice seguro, si podemos enumerar los procesos que est\'an corriendo actualmente $P_1,P_2,\dots,P_n$ de modo tal de que $P_1$ tiene disponibles todos los recursos que necesita terminar, y para todo $i > 1$ se cumple que entre los recursos disponibles y los recursos que tienen tomados los procesos $P_1,\dots,P_{i-1}$ tiene todos los recursos que necesita para terminar.
-
-Un algoritmo de prevenci\'on de deadlock, que implica conocer cu\'antos recursos de cada tipo va a necesitar cada proceso de antemano, consiste en s\'olo asignar recursos a los procesos si la asignaci\'on lleva a un estado seguro.
+Un estado se dice seguro, si podemos enumerar los procesos que est\'an corriendo actualmente $P_1,P_2,\dots,P_n$ de modo tal de que $P_1$ tiene disponibles todos los recursos que necesita terminar, y para todo $P_i$ con $i > 1$ se cumple que entre los recursos disponibles y los recursos que tienen tomados los procesos $P_1,\dots,P_{i-1}$ tiene todos los recursos que necesita para terminar.
 
 \subsubsection{Algoritmo del banquero}
 
@@ -576,8 +574,8 @@ El algoritmo del banquero es uno de los algoritmos m\'as famosos de prevenci\'on
 Hasta ahora venimos hablando de estados seguros pero no dijimos todav\'ia c\'omo determinar si un estado es seguro. Supongamos que tenemos $M$ recursos distintos, y $N$ procesos. Entonces el algoritmo, que tiene complejidad $O(MN^2)$, consiste en los siguiente pasos:
 
 \begin{enumerate}
-\item Inicializar un vector booleano de longitud $N$ en false, que indica que ning\'un proceso termin\'o.
-\item Buscar un proceso que no haya terminado y tal que todos los recursos que necesita para terminar est\'an disponibles. Si no existe dicho proceso ir al paso 4.
+\item Inicializar un vector booleano de longitud $N$ en false. Cada posición $i$ en este vector contendrá un valor que indicará si el proceso $P_i$ terminó o no.
+\item Buscar un proceso tal que no haya terminado y que todos los recursos que necesita para terminar est\'an disponibles. Si no existe dicho proceso ir al paso 4.
 \item Marcar al proceso del paso 2 como terminado y liberar todos sus recursos. Volver al paso 2.
 \item Si todos los procesos terminaron, el estado es seguro, caso contrario no lo es.
 \end{enumerate}
