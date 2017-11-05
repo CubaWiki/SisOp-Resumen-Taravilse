@@ -699,9 +699,9 @@ Cuando el sistema operativo decide copiar la memoria al momento en el que uno de
 
 \section{Archivos y Directorios}
 
-\subsection{Definici\'on de archivo}
+\subsection{Archivo y filesystem}
 
-Para nosotros un archivo es una secuencia de bytes que son almacenados en una unidad de almacenamiento como puede ser por ejemplo un disco r\'igido. Todos los archivos tienen un nombre, y pueden tener una extensi\'on (una o m\'as letras despu\'es del \'ultimo caracter '.' en el nombre del archivo).
+Definimos a un archivo como una secuencia de bytes almacenados en una unidad de almacenamiento, como puede ser por ejemplo un disco r\'igido. Todos los archivos tienen un nombre, y pueden tener una extensi\'on (una o m\'as letras despu\'es del \'ultimo caracter '.' en el nombre del archivo).
 
 Un archivo generalmente tiene los siguientes atributos:
 
@@ -715,14 +715,16 @@ Un archivo generalmente tiene los siguientes atributos:
 \item Fecha, hora y usuario: Sirve para saber cu\'ando se cre\'o o se modific\'o el archivo y qui\'en fue el usuario que lo cre\'o o modific\'o.
 \end{itemize}
 
-Un archivo es una unidad de almacenamiento l\'ogica sobre la cu\'al se pueden realizar las siguientes operaciones:
+De forma abreviada, definiremos un filesystem como un módulo del sistema operativo encargado de organizar la información en disco.
 
-\begin{itemize}
-\item Crear un archivo: Primero se debe buscar espacio en el file system para el archivo, y luego se debe ubicar el archivo en el directorio correspondiente asign\'andole un nombre.
-\item Escribir un archivo: Para escribir un archivo se debe invocar una system call del sistema operativo indicando el nombre del archivo y el contenido que se desea escribir. Dado el nombre del archivo, el sistema operativo debe buscar el directorio donde se encuentra para ubicar el archivo en el file system.
-\item Leer un archivo: Para leer un archivo debemos usar una system call especificandole el nombre del archivo y d\'onde queremos que cargue el archivo en memoria.
-\item Borrar un archivo: Hay que buscar el archivo en el directorio correspondiente, liberar el espacio que ocupa el archivo y borrar la entrada correspondiente a ese archivo en el directorio.
-\end{itemize}
+% Un archivo es una unidad de almacenamiento l\'ogica sobre la cu\'al se pueden realizar las siguientes operaciones:
+% 
+% \begin{itemize}
+% \item Crear un archivo: Primero se debe buscar espacio en el file system para el archivo, y luego se debe ubicar el archivo en el directorio correspondiente asign\'andole un nombre.
+% \item Escribir un archivo: Para escribir un archivo se debe invocar una system call del sistema operativo indicando el nombre del archivo y el contenido que se desea escribir. Dado el nombre del archivo, el sistema operativo debe buscar el directorio donde se encuentra para ubicar el archivo en el file system.
+% \item Leer un archivo: Para leer un archivo debemos usar una system call especificandole el nombre del archivo y d\'onde queremos que cargue el archivo en memoria.
+% \item Borrar un archivo: Hay que buscar el archivo en el directorio correspondiente, liberar el espacio que ocupa el archivo y borrar la entrada correspondiente a ese archivo en el directorio.
+% \end{itemize}
 
 \subsection{Directorios}
 
