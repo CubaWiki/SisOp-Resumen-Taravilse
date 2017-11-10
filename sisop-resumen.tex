@@ -782,11 +782,11 @@ Otra alternativa es guardar los bloques como listas enlazadas. S\'olo guardamos 
 
 \subsubsection{Tablas FAT}
 
-Una alternativa al almacenamiento con listas enlazadas es lo que se conoce como \textbf{File Allocation Table (FAT)}, que es una tabla que, para cada bloque guarda el n\'umero del siguiente bloque del archivo al que pertenece ese bloque. Para el \'ultimo bloque del archivo guarda un -1 indicando que termin\'o el archivo en ese bloque.
+Una alternativa al almacenamiento con listas enlazadas es lo que se conoce como \textbf{File Allocation Table (FAT)}, que es una tabla que tiene una entrada para cada bloque. En cada entrada se guarda el n\'umero del siguiente bloque del archivo al que pertenece ese bloque. Para el \'ultimo bloque del archivo guarda un -1 indicando que termin\'o el archivo en ese bloque. 
 
-Una ventaja que tiene el uso de tablas FAT es que el acceso aleatorio es mucho m\'as eficiente, ya que al estar todo el bloque ocupado con datos, y no tener los punteros al bloque siguiente, calcular el offset en un archivo se vuelve mucho m\'as r\'apido ya que los tama\~nos de los bloques son potencias de 2, y siempre es m\'as f\'acil calcular un offset cuando tenemos que saltear $n$ bloques que contienen una cantidad de datos potencia de 2.
+A comparación del almacenamiento con listas enlazadas, vuelve mas sencillo el calculo para encontrar un bloque particular basado en un offset de bytes del archivo, ya que no tendremos que tener en cuenta los bytes utilizados en cada bloque por el puntero al siguiente bloque.
 
-Una desventaja que tiene la FAT es que como toda la tabla tiene que estar en memoria, esta ocupa demasiado espacio en la misma. Por ejemplo, con un disco de 200GB, bloques de 1KB, y entradas de 4 bytes, la tabla ocupar\'ia 800MB de memoria.
+Una desventaja que tiene FAT es que la tabla tiene que estar en memoria, y esta puede llegar a ocupar demasiado espacio. Por ejemplo, en un disco de 200GB, bloques de 1KB, y entradas de 4 bytes, la tabla ocupar\'ia 800MB de memoria.
 
 \subsubsection{i-nodos}
 
