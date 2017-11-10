@@ -782,7 +782,7 @@ Otra alternativa es guardar los bloques como listas enlazadas. S\'olo guardamos 
 
 \subsubsection{Tablas FAT}
 
-Una alternativa al almacenamiento con listas enlazadas es lo que se conoce como \textbf{File Allocation Table (FAT)}, que es una tabla que tiene una entrada para cada bloque. En cada entrada se guarda el n\'umero del siguiente bloque del archivo al que pertenece ese bloque. Para el \'ultimo bloque del archivo guarda un -1 indicando que termin\'o el archivo en ese bloque. 
+Una alternativa al almacenamiento con listas enlazadas es lo que se conoce como \textbf{File Allocation Table (FAT)}, que es una tabla que tiene una entrada para cada bloque. En cada entrada se guarda el n\'umero del siguiente bloque del archivo al que pertenece ese bloque. Para el \'ultimo bloque del archivo guarda un -1 indicando que termin\'o el archivo en ese bloque. Además, esta acompañada de una directory table, que contiene los nombres de archivos, sus starting blocks y sus metadatos.
 
 A comparación del almacenamiento con listas enlazadas, vuelve mas sencillo el calculo para encontrar un bloque particular basado en un offset de bytes del archivo, ya que no tendremos que tener en cuenta los bytes utilizados en cada bloque por el puntero al siguiente bloque.
 
