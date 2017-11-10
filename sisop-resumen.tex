@@ -788,21 +788,25 @@ A comparación del almacenamiento con listas enlazadas, vuelve mas sencillo el c
 
 Una desventaja que tiene FAT es que la tabla tiene que estar en memoria, y esta puede llegar a ocupar demasiado espacio. Por ejemplo, en un disco de 200GB, bloques de 1KB, y entradas de 4 bytes, la tabla ocupar\'ia 800MB de memoria.
 
-\subsubsection{i-nodos}
+\subsubsection{FCBs}
 
-Los i-nodos (index node) son estructuras de datos que contienen los atributos de un archivo y links a los bloques en los que est\'a almacenado el archivo. La ventaja de los i-nodos sobre las tablas FAT es que los i-nodos (uno por archivo) s\'olo est\'an presentes en memoria cuando el archivo est\'a cargado en memoria, por lo que podemos tener un disco arbitrariamente grande que no vamos a tener que tener una cantidad proporcional de i-nodos cargados en memoria.
+Los \textbf{File Control Block} son estructuras de datos que contienen los atributos de un archivo y links a los bloques en los que est\'a almacenado el archivo. Bajo la implementación de Unix reciben el nombre de i-nodos (index node).
 
-El problema surge cuando hay m\'as bloques que la capacidad de los i-nodos. Por ejemplo, si un archivo tiene 1000 bloques y un i-nodo tiene capacidad para direccionar a 512 bloques, entonces un i-nodo no va a servir en este caso. Para solucionar este problema, algunas implementaciones de i-nodos reservan las \'ultimas entradas para apuntar a bloques que a su vez apuntan a bloques del archivo.
+La ventaja de los FCBs sobre las tablas FAT es que los FCBs (uno por archivo) s\'olo est\'an presentes en memoria cuando el archivo est\'a cargado en memoria, por lo que podemos tener un disco arbitrariamente grande que no vamos a tener que tener una cantidad proporcional de FCBs cargados en memoria.
 
-La implementaci\'on de UNIX de los i-nodos tiene tres entradas reservadas en cada i-nodo, que son las \'ultimas tres. Las primeras entradas en el i-nodo estan reservadas para atributos del archivo, luego las siguientes 12 entradas en el i-nodo apuntan a bloques del archivo, que corresponden a los bloques en donde se guardan los datos del archivo. La entrada n\'umero 13 apunta a un bloque que tiene 2048 entradas de 32 bits (dado que los bloques en UNIX son de 8KB) que apuntan a bloques del archivo, esto suma 16MB a los 96KB que ya pod\'ia tener un archivo con las primeras 12 entradas. La entrada 14 apunta a un bloque que a su vez apunta en cada entrada a bloques que apuntan a bloques del archivo, esto nos da la posibilidad de 32GB. A su vez, la entrada 15 permite triple indireccionamiento (bloques que apuntan a bloques que apuntan a bloques que apuntan a bloques del archivo!!!!) lo que permite archivos de hasta 64TB!
+El problema surge cuando hay m\'as bloques que la capacidad de un FCB. Por ejemplo, si un archivo tiene 1000 bloques y un FCB tiene capacidad para direccionar a 512 bloques, entonces un FCB no va a servir en este caso. Para solucionar este problema, algunas implementaciones reservan las \'ultimas entradas con propósitos de direccionamiento indirecto.
 
-\subsection{Implementando directorios}
+\subsection{i-nodos}
 
-El \'arbol de directorios en UNIX se implementa con un i-nodo especial que apunta al root directory, y en cada directorio hay un bloque que tiene una lista de pares (nombre de archivo,i-nodo), donde el archivo puede ser a su vez un subdirectorio, que le indica cu\'al es el i-nodo correspondiente a cada uno de los archivos en ese directorio (los archivos, nuevamente, pueden ser directorios). En algunos casos, cuando los directorios tienen muchos archivos, en lugar de guardar los nombres de los archivos con sus i-nodos correspondientes uno por uno, se utiliza una tabla de hash que hashea los nombres de los archivos y nos da los pares de (nombre de archivo,i-nodo) que matchean ese hash.
+La implementaci\'on de UNIX ext2 de i-nodos reserva las últimas tres entradas de cada i-nodo con un propósito especial, las mismas son llamadas indirect block pointers. Las primeras entradas en el i-nodo están reservadas para atributos del archivo, luego las siguientes 12 entradas en el i-nodo apuntan a bloques del archivo, que corresponden a los bloques en donde se guardan los datos del archivo. La entrada n\'umero 13 apunta a un bloque que tiene 2048 entradas de 32 bits (dado que los bloques en UNIX son de 8KB) que apuntan a bloques del archivo, esto suma 16MB a los 96KB que ya pod\'ia tener un archivo con las primeras 12 entradas. La entrada 14 apunta a un bloque que a su vez apunta en cada entrada a bloques que apuntan a bloques del archivo, esto nos da la posibilidad de 32GB. A su vez, la entrada 15 permite triple indireccionamiento (bloques que apuntan a bloques que apuntan a bloques que apuntan a bloques del archivo!!!!) lo que permite archivos de hasta 64TB!
 
-Generalmente los i-nodos se encuentran despu\'es del boot block y del superblock (un bloque que contiene informaci\'on sobre el file system como por ejemplo qu\'e file system es y cu\'antos i-nodos tiene). Despu\'es de todos los i-nodos vienen los bloques del disco.
+\subsubsection{Implementando directorios en ext2}
 
-\subsection{Atributos}
+El \'arbol de directorios en UNIX se implementa con un i-nodo especial que representa el root directory, este i-nodo tiene como datos una lista de entradas en el formato (i-nodo, nombre de archivo, tipo de archivo). El tipo de archivo puede ser a su vez otro directorio, donde su i-nodo contendrá la lista de archivos que contiene. En algunos casos, cuando los directorios tienen muchos archivos, en lugar de guardar los nombres de los archivos con sus i-nodos correspondientes uno por uno, se utiliza una tabla de hash que hashea los nombres de los archivos y nos da los pares de (nombre de archivo,i-nodo) que matchean ese hash.
+
+En ext2 se encuentran en orden el boot block, el superblock, los i-nodos y los bloques de datos. El superblock es un bloque que contiene informaci\'on sobre el file system, como por ejemplo qu\'e file system es y cu\'antos i-nodos tiene, como así también el numero de i-node que corresponde al root directory.
+
+\subsubsection{Atributos}
 
 Cada archivo tiene sus atributos, que en el caso de los i-nodos, se guardan en los primeros bytes de cada i-nodo. Algunos de estos atributos son:
 
@@ -815,23 +819,33 @@ Cada archivo tiene sus atributos, que en el caso de los i-nodos, se guardan en l
 \item CRC (bytes que sirven para verificar que el archivo no est\'e da\~nado).
 \end{itemize}
 
-\subsection{Journaling}
+\subsubsection{Bloques libres}
 
-Para evitar escrituras constantes en el disco podr\'iamos tener una cach\'e (una copia de bloques de disco en memoria) que se maneje de modo similar a las p\'aginas. Un problema que puede tener esto es por ejemplo que se corte la energ\'ia el\'ectrica antes de que se bajen los datos de memoria a disco.
+Un problema importante a resolver por el file system es c\'omo mantener la lista de bloques libres. Hay dos soluciones a este problema que son los m\'as comunes. 
 
-Una alternativa a este problema es lo que se conoce como journaling. Algunos file systems tienen un log o journal (de ah\'i el nombre journaling) que es un registro de cambios que hay que hacer en el disco. Eso se graba en un buffer circular en disco, y es mucho m\'as r\'apido escribir en este buffer que en bloques aleatorios ya que la escritura es secuencial. Estos cambios se van actualizando en el disco, y si por ejemplo, se llena el buffer, se actualizan todos los cambios para tener lugar nuevamente en el buffer. Cuando el sistema se levanta luego de un apagado inesperado estos cambios se realizan en el disco.
+Una es mantener un bitmap con cada bit en 0 si el bloque est\'a libre y en 1 si el bloque est\'a ocupado. Por ejemplo con bloques de 8KB, y un disco de 500GB, necesitamos alrededor de 1000 bloques para almacenar el bitmap. Se suele ademas mantener mapas distintos para i-nodos y bloques de datos. Dado que esto puede producir mapas de bits extremadamente grandes, ext2 utiliza los llamados \textbf{block groups}, generalmente análogos a los grupos de cilindros con el propósito minimizar la cantidad de seeks cuando se leen grandes cantidades de datos contiguos. Cada block group recibe una copia del superblock y la tabla descriptora de block groups, y todos los block groups contienen un bitmap de bloques de datos, un bitmap de i-nodos, la tabla de i-nodos y los bloques de datos correspondientes a dicho grupo de bloques.
 
-\subsection{Bloques libres}
-
-Un problema importante a resolver por el file system es c\'omo mantener la lista de bloques libres. Hay dos approachs a este problema que son los m\'as comunes. Uno es mantener un bitmap con cada bit en 0 si el bloque est\'a libre y en 1 si el bloque est\'a ocupado. Por ejemplo con bloques de 8KB, y un disco de 500GB, necesitamos alrededor de 1000 bloques para almacenar el bitmap.
-
-La otra posibilidad es mantener una lista de bloques libres, en los mismos bloques libres. Guardamos un puntero al primer bloque libre, y en ese bloque libre guardamos una lista de bloques libres, reservando una entrada para el pr\'oximo bloque donde contin\'ua la lista. La ventaja de este approach es que los bloques libres se almacenan en bloques libres, y si tenemos menos bloques libres (el disco casi lleno) entonces la lista de bloques libres es m\'as chica y entra en los pocos bloques libres que tenemos.
+La otra solución es utilizar una lista enlazada, manteniendo una lista de bloques libres, en los mismos bloques libres. Guardamos un puntero al primer bloque libre, y en ese bloque libre guardamos una lista de bloques libres, reservando una entrada para el pr\'oximo bloque donde contin\'ua la lista. La ventaja de esta solución es que no utilizamos almacenamiento adicional para guardar la información de bloques libres, ya que a medida que vamos teniendo mas bloques ocupados esta lista se achica y entra en los pocos bloques libres que tenemos.
 
 Una optimizaci\'on a esta \'ultima implementaci\'on es guardar un par que tenga un bloque libre, y la cantidad de bloques libres a partir de ese bloque. Esta optimizaci\'on, sin embargo, se vuelve ineficiente cuando el disco se empieza a fragmentar demasiado.
 
+\subsubsection{Journaling}
+
+Para evitar escrituras constantes en el disco podríamos hacer uso de una cach\'e (una copia de bloques de disco en memoria) que se maneje de modo similar a las p\'aginas. Sin embargo, en un eventual corte de energ\'ia el\'ectrica, esta solución puede ocasionar que se pierdan datos, por ejemplo si el corte ocurre antes de que se copien los datos de memoria a disco.
+
+Una alternativa a este problema es lo que se conoce como journaling. Algunos file systems tienen un log o journal (de ah\'i el nombre journaling) que es un registro de cambios a realizar en el disco. Se denomina a un conjunto de operaciones con cierta finalidad especifica como una transacción. Antes de comenzar con una transacción, se escribe una lista de operaciones en el disco (commit) y se mantiene un puntero sobre la misma, que indica hasta que punto la misma esta completada. Se van realizando una por una las operaciones, y a medida que se terminan, el puntero se va actualizando. En el caso del que sistema falle y una transacción no este completa, se ejecutan todas las acciones a partir de donde indica el puntero.
+
+El journal se graba en un buffer circular en disco, y es mucho m\'as r\'apido escribir en este buffer que en bloques aleatorios, ya que la escritura es secuencial. Estos cambios se van actualizando en el disco, y si por ejemplo, se llena el buffer, se efectúan todos los cambios para tener lugar nuevamente en el buffer.
+
 \subsection{Network file systems}
 
-Existen file systems para sistemas distribuidos, en donde un file system reside en un servidor y varios clientes pueden acceder a los archivos del file system. Un ejemplo de un network file system es NFS. NFS permite montar directorios de un file system remoto en un file system local para permitir el acceso a los archivos como si fuesen parte del file system local. Pese a ser muy sencillo, NFS no escala bien.
+Existen file systems para sistemas distribuidos, en donde un file system reside en un servidor y varios clientes pueden acceder a los archivos del file system. Un ejemplo de un network file system es NFS. NFS permite montar directorios de un file system remoto en un file system local para permitir el acceso a los archivos como si fuesen parte del file system local. Para soportar esto, es necesario que todas las operaciones sobre el FS local y remoto tengan la misma interfaz.
+
+El \textbf{Virtual File System} es una interfaz entre el kernel y un FS concreto. El mismo abstrae operaciones comunes a todos los FS, de modo que el kernel pueda operar de la misma forma, indistintamente de ser un FS local o remoto. Logra esto utilizando la nocion de \textbf{vnodos}, cuando el FS es local se corresponde con un inodo, de lo contrario tiene otra información. Por lo que, tanto como los FS locales y remotos implementan vnodos.
+
+De esta manera los pedidos que llegan al VFS pueden ser despachados al FS o a NFS, por lo cual el cliente de NFS debe ser un módulo de kernel (ya que el FS hace la llamada a nivel kernel), pero el servidor de NFS puede correr a nivel usuario.
+
+NFS no es completamente distribuido porque los datos de un mismo directorio deben vivir físicamente en un mismo lugar, y por lo tanto no escala de forma adecuada.
 
 \section{Entrada/Salida}
 
