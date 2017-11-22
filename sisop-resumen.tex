@@ -735,29 +735,22 @@ NFS no es completamente distribuido porque los datos de un mismo directorio debe
 
 \section{Entrada/Salida}
 
-\subsection{Drivers}
-
-Los dispositivos de entrada salida necesitan una forma de comunicarse con la CPU. Por ejemplo, un mouse necesita saber decirle al procesador que el usuario hizo un click o un desplazamiento hacia la derecha. Para esta comunicaci\'on existen m\'odulos de software muy espec\'ificos llamados drivers. Existen varias formas en las que los drivers pueden comunicarse con los dispositivos para saber cu\'ando los dispositivos terminaron de hacer algo (por ejemplo, cu\'ando el usuario movi\'o el mouse, cu\'ando el disco termin\'o de escribir un archivo, o cu\'ando una impresora termin\'o de imprimir un documento). Veremos a continuaci\'on tres de estas formas.
-
-\subsubsection{Polling}
-
-El driver le pregunta peri\'odicamente al dispositivo si hay novedades. Es una de las formas m\'as sencillas de comunicar un dispositivo con un driver, aunque es poco eficiente porque consume mucha CPU. En algunos casos muy puntuales puede ser una buena idea ya que si bien consume mucha CPU, es m\'as eficiente que lo que consumen las interrupciones con los cambios de contexto.
-
-\subsubsection{Interrupciones}
-
-El dispositivo le avisa al controlador de interrupciones que termin\'o de hacer su tarea. Este a su vez, decide cu\'ando atender la interrupci\'on y avisarle al driver que tiene trabajo que hacer. Cuando interviene la CPU estamos ante una E/S programada (Programmed I/O).
-
-\subsubsection{DMA}
-
-Se requiere de un componente de Hardware, el controlador de DMA. Este se encarga de comunicarse con los dispositivos y le avisa a la CPU por medio de una interrupci\'on cuando ya termin\'o de realizar la entrada/salida.
-
 \subsection{Subsistema de E/S}
 
-El manejador de entrada/salida le provee al programador una API sencilla para comunicarse con los dispositivos. Sin embargo, hay cosas que no se le pueden ocultar a los procesos. Estos deben saber por ejemplo si tienen acceso exclusivo a un dispositivo. Esta responsabilidad es compartida entre el manejador de E/S y los drivers.
+El manejador de E/S (entrada/salida) dota al sistema operativo con una API genérica para comunicarse con dispositivos, y brinda también información adicional, como por ejemplo si un dispositivo es de acceso exclusivo o compartido. La API sirve de interfaz entre un dispositivo y un programa usuario, permitiendo así el acceso a una fauna de dispositivos distintos, en forma consistente y ocultando particularidades de cada uno tanto como sea posible. Los dispositivos pueden ser de lectura, escritura o ambos, pueden ser dedicados o compartidos, y pueden tener distintas velocidades de respuesta.
 
-Una de las tareas del sistema operativo es ocultar las particularidades de cada dispositivo brindando una API gen\'erica para acceder a todos los dispositivos del mismo tipo. Los dispositivos pueden ser de lectura, escritura o ambas, pueden ser dedicados o compartidos, y pueden tener distintas velocidades de respuesta.
+En Linux todos los dispositivos están mapeados a archivos, y para permitir el acceso a estos la API del subsistema de E/S cuenta con funciones que pueden ser utilizadas por un programa usuario: 
 
-Existen dos tipos de dispositivos de entrada/salida.
+\begin{itemize}
+ \item fopen, fclose: apertura y cierre de archivos.
+ \item fread, fwrite: leer y escribir en modo bloque.
+ \item fgetc, fputc: leer y escribir en modo char.
+ \item fgets, fputs: leer y escribir en modo char stream.
+ \item fscanf, fprintf: leer y escribir en modo char con formato.
+\end{itemize}
+
+
+Existen dos tipos de dispositivos de E/S: char y block devices.
 
 \subsubsection{Char devices}
 
@@ -766,6 +759,45 @@ Los char devices son dispositivos que transmiten la informaci\'on byte a byte. E
 \subsubsection{Block devices}
 
 Los block devices son dispositivos en los que la informaci\'on se transmite por bloques. Estos dispositivos soportan acceso aleatorio y generalmente utilizan un buffer (cach\'e).
+
+\subsection{Drivers y dispositivos}
+
+El subsistema de E/S no se comunica en forma directa con cada uno de los dispositivos, ya que debería conocer las particularidades de toda la fauna de dispositivos, lo que es imposible. En cambio, esta responsabilidad se deriva a módulos de software llamados drivers. Un driver es un programa que corre en máximo privilegio y que le provee al subsistema de E/S una interfaz para comunicarse con un dispositivo. Es decir, el driver se ubica entre el subsistema de E/S y el dispositivo, abstrayendo todas las cuestiones particulares de dicho dispositivo.
+
+~
+
+Por otro lado un dispositivo se compone de varias partes:
+
+\begin{itemize}
+ \item Una parte electromecánica.
+ \item Un controlador de dispositivo: una parte electrónica a la que se le puede enviar comandos mediante algún tipo de bus o registro y responde de forma similar.
+ \item 4 registros (por lo general) dedicados a la comunicación con un proceso host:
+ \begin{itemize}
+  \item Data-in: para que el host lea input.
+  \item Data-out: para que el host escriba output.
+  \item Status: contiene bits que pueden ser leidos por el host y que indican el estado (si un comando termino de ejecutarse, si hay datos para leer en data-in, etc).
+  \item Control: escrito por el host para empezar un comando o cambiar el modo de un dispositivo.
+ \end{itemize}
+
+\end{itemize}
+
+Los drivers pueden interactuar con los dispositivos a través de los registros del puerto. Estos se pueden escribir ejecutando instrucciones especiales para escribir directamente en ellos (in y out en x86) o mapeando ciertas direcciones de RAM a ciertos registros del dispositivo, de forma tal de poder escribir haciendo uso de las mismas instrucciones que utilizariamos para escribir en memoria. Para saber cu\'ando un dispositivo terminó de hacer algo (por ejemplo, cu\'ando el usuario movi\'o el mouse, cu\'ando el disco termin\'o de escribir un archivo, o cu\'ando una impresora termin\'o de imprimir un documento) se emplean diversas técnicas, entre ellas polling, interrupciones y DMA.
+
+\subsubsection{Polling}
+
+El driver utiliza los registros de puerto del dispositivo para peri\'odicamente leer el estado del mismo. Es una de las formas m\'as sencillas de comunicar un dispositivo con un driver, aunque es poco eficiente ya que consume mucha CPU. En algunos casos puntuales puede ser una alternativa viable ya que es m\'as eficiente que los cambios de contexto provocados por las interrupciones.
+
+\subsubsection{Interrupciones}
+
+El dispositivo le avisa al controlador de interrupciones en el CPU que termin\'o de hacer su tarea haciendo uso del IRL (interrupt-request line), que la CPU sensa luego de cada instrucción. Una vez que el controlador decida antender la interrupci\'on, derivará el control a la rutina asignada a dicha interrupción. Esta rutina vive dentro del subsistema de E/S, que a su vez derivara el control al driver. Cuando interviene la CPU estamos ante una E/S programada (Programmed I/O). La ventaja de esta alternativa es que si la comunicación es poco frecuente ahorra mucha CPU, la desventaja es que tendremos interrupciones asincrónicas.
+
+\subsubsection{DMA}
+
+Se requiere de un componente de Hardware, el controlador de DMA. La idea es que haciendo uso de este controlado, el dispositivo pueda escribir a memoria con ayuda del DMA sin intervención de la CPU. La misma solo interviene al final de la escritura, cuando el dispositivo la interrumpe.
+
+Para hacer uso de esto el proceso que esta haciendo uso del dispositivo le indica al CPU que quiere hacer una transferencia por medio de DMA. Para esto debe grabar la fuente de datos, la posicion de memoria a donde quiere escribir los mismos y la cantidad; todo esto es llamado bloque DMA. El CPU le pasa este bloque al controlador DMA y reanuda otras tareas. El controlador DMA se ocupa de controlar el bus de memoria para la transferencia.
+
+La ventaja de esta alternativa es que permite transferir grandes volumenes de datos sin afectar al resto del sistema, la desventaja es que requiere un controlador DMA.
 
 \subsection{Discos}
 
