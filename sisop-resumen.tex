@@ -766,7 +766,7 @@ El subsistema de E/S no se comunica en forma directa con cada uno de los disposi
 
 ~
 
-Por otro lado un dispositivo se compone de varias partes:
+Un dispositivo se compone de varias partes:
 
 \begin{itemize}
  \item Una parte electromecánica.
@@ -781,7 +781,7 @@ Por otro lado un dispositivo se compone de varias partes:
 
 \end{itemize}
 
-Los drivers pueden interactuar con los dispositivos a través de los registros del puerto. Estos se pueden escribir ejecutando instrucciones especiales para escribir directamente en ellos (in y out en x86) o mapeando ciertas direcciones de RAM a ciertos registros del dispositivo, de forma tal de poder escribir haciendo uso de las mismas instrucciones que utilizariamos para escribir en memoria. Para saber cu\'ando un dispositivo terminó de hacer algo (por ejemplo, cu\'ando el usuario movi\'o el mouse, cu\'ando el disco termin\'o de escribir un archivo, o cu\'ando una impresora termin\'o de imprimir un documento) se emplean diversas técnicas, entre ellas polling, interrupciones y DMA.
+Los drivers pueden interactuar con los dispositivos a través de los registros del puerto. Estos se pueden escribir ejecutando instrucciones especiales para escribir directamente en ellos (in y out en x86) o mapeando ciertas direcciones de RAM a ciertos registros del dispositivo, de forma tal de poder escribir haciendo uso de las mismas instrucciones que utilizaríamos para escribir en memoria. Para saber cu\'ando un dispositivo terminó de hacer algo (por ejemplo, cu\'ando el usuario movi\'o el mouse, cu\'ando el disco termin\'o de escribir un archivo, o cu\'ando una impresora termin\'o de imprimir un documento) se emplean diversas técnicas, entre ellas polling, interrupciones, DMA y spooling.
 
 \subsubsection{Polling}
 
@@ -789,21 +789,27 @@ El driver utiliza los registros de puerto del dispositivo para peri\'odicamente 
 
 \subsubsection{Interrupciones}
 
-El dispositivo le avisa al controlador de interrupciones en el CPU que termin\'o de hacer su tarea haciendo uso del IRL (interrupt-request line), que la CPU sensa luego de cada instrucción. Una vez que el controlador decida antender la interrupci\'on, derivará el control a la rutina asignada a dicha interrupción. Esta rutina vive dentro del subsistema de E/S, que a su vez derivara el control al driver. Cuando interviene la CPU estamos ante una E/S programada (Programmed I/O). La ventaja de esta alternativa es que si la comunicación es poco frecuente ahorra mucha CPU, la desventaja es que tendremos interrupciones asincrónicas.
+El dispositivo le avisa al controlador de interrupciones en el CPU que termin\'o de hacer su tarea haciendo uso del IRL (interrupt-request line), que la CPU sensa luego de cada instrucción. Una vez que el controlador decida atender la interrupci\'on, derivará el control a la rutina asignada a dicha interrupción. Esta rutina vive dentro del subsistema de E/S, que a su vez derivara el control al driver. Cuando interviene la CPU estamos ante una E/S programada (Programmed I/O). La ventaja de esta alternativa es que si la comunicación es poco frecuente ahorra mucha CPU, la desventaja es que tendremos interrupciones asincrónicas.
 
 \subsubsection{DMA}
 
 Se requiere de un componente de Hardware, el controlador de DMA. La idea es que haciendo uso de este controlado, el dispositivo pueda escribir a memoria con ayuda del DMA sin intervención de la CPU. La misma solo interviene al final de la escritura, cuando el dispositivo la interrumpe.
 
-Para hacer uso de esto el proceso que esta haciendo uso del dispositivo le indica al CPU que quiere hacer una transferencia por medio de DMA. Para esto debe grabar la fuente de datos, la posicion de memoria a donde quiere escribir los mismos y la cantidad; todo esto es llamado bloque DMA. El CPU le pasa este bloque al controlador DMA y reanuda otras tareas. El controlador DMA se ocupa de controlar el bus de memoria para la transferencia.
+Para hacer uso de esto el proceso que esta haciendo uso del dispositivo le indica al CPU que quiere hacer una transferencia por medio de DMA. Para esto debe grabar la fuente de datos, la posición de memoria a donde quiere escribir los mismos y la cantidad; todo esto es llamado bloque DMA. El CPU le pasa este bloque al controlador DMA y reanuda otras tareas. El controlador DMA se ocupa de controlar el bus de memoria para la transferencia.
 
-La ventaja de esta alternativa es que permite transferir grandes volumenes de datos sin afectar al resto del sistema, la desventaja es que requiere un controlador DMA.
+La ventaja de esta alternativa es que permite transferir grandes volúmenes de datos sin afectar al resto del sistema, la desventaja es que requiere un controlador DMA.
+
+\subsubsection{Spooling}
+
+Hay dispositivos que requieren acceso dedicado, como por ejemplo las impresoras. Si se envian a imprimir dos documentos no puede suceder que se impriman las l\'ineas de los dos documentos alternadamente. Lo que se quiere en estos casos es imprimir un documento y luego imprimir el otro. Tampoco es conveniente que el proceso que mand\'o a imprimir se bloquee esperando que terminen todas las dem\'as impresiones. Por ello es conveniente poner todos los trabajos en una cola y que un proceso se encargue de ir desencol\'andolos. Para el sistema operativo el spooling es transparente, ya que solo interactua con el proceso que se encarga de mantener la cola, sin embargo los usuarios pueden acceder a la cola, por ejemplo, para cancelar la impresi\'on de un documento.
 
 \subsection{Discos}
 
-Una de las claves para obtener un buen rendimiento de E/S es manejar apropiadamente el disco. El disco tiene una cabeza que se mueve y moverlo consume tiempo. Los pedidos de acceso a disco llegan constantemente y es importante atenderlos de modo tal de minimizar estos movimientos pero sin generar inanici\'on.
+Una de las claves para obtener un buen rendimiento de E/S es manejar apropiadamente el disco. El disco tiene una cabeza que móvil consume tiempo al desplazarse. Los pedidos de acceso a disco llegan constantemente y es importante atenderlos de modo tal de minimizar estos movimientos y al mismo tiempo no generar inanici\'on.
 
-El tiempo necesario para que el disco rote y la cabeza quede sobre el sector deseado se llama latencia rotacional, pero lo m\'as importante, es el tiempo de b\'usqueda (seek time), que es el tiempo necesario para que la cabeza se ubique sobre el cilindro que tiene el sector buscado.
+Para efectuar una lectura o escritura, hay que: mover el cabezal, para acomodarlo en el cilindro correspondiente; rotar el disco, para situar el cabezal sobre el sector correspondiente; y escribir o leer.
+
+De estas etapas mover el cabezal es la mas lenta de ellas, y el tiempo insumido por este movimiento es llamado seek time. Tendremos tambien la llamada rotational latency que es el tiempo necesario para rotar el disco y ubicarlo sobre el sector buscado.
 
 Existen varias pol\'iticas de scheduling de acceso a disco, algunas de las cuales optimizan el seek time para hacer los accesos a disco m\'as r\'apidos.
 
@@ -817,27 +823,46 @@ La pol\'itica SSTF consiste en atender siempre el pedido que involucre el menor 
 
 \subsubsection{SCAN}
 
-El algoritmo SCAN (o algoritmo del ascensor) recorre el disco de una punta a la otra ida y vuelta, atendiendo los pedidos en orden. Si llega un pedido por el cilindro por el que acaba de pasar la cabeza tiene que esperar a que llegue al final y vuelva. Igualmente es mucho m\'as eficiente que los anteriores porque optimiza un poco m\'as que FCFS el uso de la cabeza y no genera inanici\'on.
+El algoritmo SCAN (o algoritmo del ascensor) recorre el disco de una punta a la otra ida y vuelta, atendiendo los pedidos en orden. Si llega un pedido por el cilindro por el que acaba de pasar la cabeza tiene que esperar a que llegue al final y vuelva. Igualmente es m\'as eficiente que los anteriores porque optimiza un poco m\'as que FCFS el uso de la cabeza y no genera inanici\'on.
 
 \subsubsection{Circular SCAN}
 
-Circular SCAN (o C-SCAN) funciona como SCAN, con la diferencia de que recorre el disco de una punta a la otra, y cuando llega al extremo final vuelve al extremo inicial sin atender recorridos en el camino.
+Circular SCAN (o C-SCAN) funciona como SCAN, con la diferencia de que recorre el disco de una punta a la otra, y cuando llega al extremo final vuelve al extremo inicial sin atender recorridos en el camino. La motivación de la razon de ser de esta politica es que con SCAN una vez que llegamos a uno de los extremos del disco tendremos muchos pedidos para atender en el extremo opuesto.
 
 \subsubsection{Look}
 
-El algoritmo Look funciona como SCAN pero con la diferencia de que si ve que no tiene pedidos en lo que le queda por recorrer del disco, empieza el camino hacia el otro lado atendiendo pedidos sin ir hasta el fondo y volver. Tambi\'en existe la versi\'on Circular Look (o C-Look).
+El algoritmo Look funciona como SCAN pero con la diferencia de que si ve que no tiene pedidos en lo que le queda por recorrer del disco, empieza el camino hacia el otro lado atendiendo pedidos sin ir hasta el fondo y volver. Tambi\'en existe la versi\'on Circular Look (o C-Look), análogo a C-SCAN pero implementando la estrategia de Look.
 
 En la vida real no se utiliza ninguno de estos algoritmos sino que se agregan prioridades.
 
+\subsection{SSDs}
+
+Los SSDs estan compuestos por memoria no volátil de funcionamiento electrónico (NAND). Al no tener partes móviles, los tiempos de lectura y escritura se ven drásticamente reducidos, al igual que los costos energéticos para operarlos. Sin embargo, estos discos poseen desventajas: son generalmente mas caros que los discos magnéticos y su capacidad es reducida, contienen transistores que pueden fallar, y poseen un problema llamado write amplification. 
+
+El write amplification sucede cuando los bloques escritos a disco superan el tamaño de los bloques lógicos que se enviaron a escribir. Hay dos factores por el cual sucede este fenómeno. En primer lugar la memoria NAND tiene una limitación importante: para que un bloque sea escrito el mismo primero debe ser borrado. En segundo lugar los SSDs pueden leer y escribir a bloque, pero el borrado solo se puede hacer a tamaño de superbloque. Por lo que, si queremos escribir un bloque y no hay lugar suficiente en un superbloque, primero hay que copiar todos los bloques que contienen información a otros lugares, borrar el superbloque y luego escribir los nuevos bloques.
+
 \subsection{Gesti\'on del Disco}
 
-Al formatear los discos se ponen unos c\'odigos en cada sector del disco que sirven a la controladora para detectar y corregir errores. Fucionan como un prefijo y un postfijo de la parte donde van los datos en cada sector. Si al leer el sector, estos c\'odigos no tienen el valor que deber\'ian el sector est\'a da\~nado.
+\subsubsection{Formateo f\'isico}
 
-Los discos suelen tener una secci\'on en ROM que carga a memoria algunos sectores del disco y los comienza a ejecutar. Este programa no es parte del sistema operativo sino que es un programa que carga el sistema operativo.
+Al formatear los discos se crean c\'odigos en forma de prefijo y posfijo en cada sector que sirven a la controladora para detectar y corregir errores, estos códigos son llamados códigos de detección de errores (ECC). Cuando el controlador escribe un sector, se recalcula el ECC para dicho sector y se lo guarda. Luego, al leer un sector también se recalcula el ECC y si el código recalculado no coincide con el ECC almacenado, indica que el sector esta dañado.
+
+Los discos SCSI vienen con sectores extra para reemplazar a los defectuosos. La controladora es la encargada de reemplazar un sector defectuoso por uno de los sectores extra actualizando una tabla interna. Para no interferir con el scheduler de E/S los discos suelen traer sectores extra en todos los cilindros.
 
 Los bloques da\~nados se manejan a veces por software y el file system es el responsable de tenerlos anotados, por ejemplo en FAT.
 
-Los discos SCSI vienen con sectores extra para reemplazar a los defectuosos. La controladora es la encargada de reemplazar un sector defectuoso por uno de los sectores extra actualizando una tabla interna. Para no interferir con el scheduler de E/S los discos suelen traer sectores extra en todos los cilindros.
+\subsubsection{Formateo l\'ogico}
+
+Primero se divide el disco en grupos de cilindros. Cada grupo se
+llama partición. El SO podrá tratar a cada partición como si fuera
+un disco distinto. Se crea un file system para cada partición, y a veces se
+deja una partición independiente del file system llamada raw disk. Este sector es usado cuando se quiere tener pleno control sobre la
+forma en que se guardan los datos. Por ejemplo, como sector de swap.
+
+\subsubsection{Booteo}
+El bootstrap es pequeño programa en memoria ROM (normalmente ubicado en el mother) que permite inicializar aspectos básicos del sistema, como los registros de CPU, controladores de dispositivos y el contenido de memoria. En general el bootstrap se limita a inicializar lo básico, y luego
+carga un programa que hace la segunda parte del booteo. Para esto, le indica al controlador de disco que lea los bloques de booteo de disco (no hay drivers en este punto). 
+Una vez cargados en memoria, comienza la ejecución de este segundo bootstrap. El segundo bootstrap suele conocer la partición donde se encuentra el SO. Se encarga de cargarlo y comenzar su ejecución.
 
 \subsection{Backup}
 
@@ -846,14 +871,14 @@ Hay formas de proteger la informaci\'on, algunas m\'as seguras y otras menos seg
 Se suele hacer en cintas y hay tres tipos de backups que son los m\'as usados:
 
 \begin{itemize}
-\item Copias totales: Se copia toda la informaci\'on del disco.
-\item Copias diferenciales: Se copian todos los archivos modificados desde la \'ultima copia total.		
-\item Copias incrementales: Se copian todos los archivos modificados desde la \'ultima copia total o incremental.
+\item Copias totales: Se copia toda la informaci\'on del disco. Para restaurarla se restaura la última.
+\item Copias diferenciales: Se copian todos los archivos modificados desde la \'ultima copia total. Para restaurarla se restaura la última copia total y luego se aplica la última copia diferencial.
+\item Copias incrementales: Se copian todos los archivos modificados desde la \'ultima copia total o incremental. Para restaurarla se restaura la última copia total, luego la última diferencial y a lo ultimo todas las copias incrementales desde la última diferencial.
 \end{itemize}
 
 \subsection{RAID}
 
-A veces hacer backup no alcanza, se puede romper un disco justo antes de hacer el backup y perdemos toda la informaci\'on desde el \'ultimo backup. Para evitar ese problema se suele utilizar RAID (Redundant Array of Inexpensive Disks). La idea b\'asicamente es copiar la informaci\'on en m\'as de un disco para que si se me rompe uno siga teniendo el otro. Tiene algunas ventajas como que puedo hacer lecturas en simult\'aneo de los dos discos pero es muy costoso escribir en dos discos a la vez. Adem\'as, tener dos copias de toda la informaci\'on puede requerir demasiado espacio en disco. Existen varios tipos de RAID que balancean todas estas ventajas y desventajas:
+A veces hacer backup no alcanza, se puede romper un disco justo antes de hacer el backup y perdemos toda la informaci\'on desde el \'ultimo backup. Para evitar ese problema se suele utilizar RAID (Redundant Array of Inexpensive Disks). La idea b\'asicamente es copiar la informaci\'on en m\'as de un disco para que si se me rompe uno siga teniendo el otro. Tiene algunas ventajas como que puedo hacer lecturas en simult\'aneo de los dos discos pero es igual de costoso escribir en dos discos a la vez. Adem\'as, tener dos copias de toda la informaci\'on puede requerir demasiado espacio en disco. Existen varios tipos de RAID que balancean todas estas ventajas y desventajas:
 
 \begin{itemize}
 \item RAID 0 (stripping): No aporta redundancia. Consiste en tener la mitad de la informaci\'on en un disco y la mitad en otro. Permite escrituras en simult\'aneo si los discos est\'an en diferentes controladoras.
@@ -867,11 +892,7 @@ A veces hacer backup no alcanza, se puede romper un disco justo antes de hacer e
 \item RAID 6: Es como RAID 5 pero utilizando dos bloques de paridad. Los dos bloques de paridad usan paridades distintas, uno de ellos la paridad com\'un y corriente y el otro alg\'un c\'odigo de correci\'on de errores como por ejemplo el c\'odigo de Reed-Solomon.
 \end{itemize}
 
-RAID no proteje contra cosas como borrar accidentalmente un archivo, por eso se suele combinar RAID con backups.
-
-\subsection{Spooling}
-
-Hay dispositivos que requieren acceso dedicado, como por ejemplo las impresoras. Si mandamos a imprimir dos documentos no nos gustar\'ia que se impriman las l\'ineas de los dos documentos alternadamente sino que queremos imprimir un documento y despu\'es imprimir el otro. Tampoco queremos que el proceso que mand\'o a imprimir se bloquee esperando que terminen todas las dem\'as impresiones. Para eso podemos poner todos los trabajos en una cola y un proceso se encarga de ir desencol\'andolos. El sistema operativo nunca se entera que est\'a haciendo spooling, los usuarios s\'i, y pueden acceder a la cola, por ejemplo, para cancelar la impresi\'on de un documento.
+RAID no proteje contra eventos como borrar accidentalmente un archivo, por eso se suele combinar RAID con backups.
 
 \section{Memoria}
 
