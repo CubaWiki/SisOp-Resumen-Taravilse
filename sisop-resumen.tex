@@ -3,6 +3,7 @@
 \usepackage[spanish]{babel}
 \usepackage{hyperref}
 \usepackage[pdftex]{graphicx}
+\usepackage{float}
 \usepackage[top=1.5in, bottom=1.5in, left=1in, right=1in]{geometry}
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
 \usepackage{listings}
@@ -912,7 +913,7 @@ La memoria puede verse como una tira de bytes consecutivos. Cada uno de estos by
 
 Cada vez que ejecutamos un proceso, este accede a memoria para cargar su c\'odigo, sus variables, y toda la informaci\'on restante que necesite guardar. Si cada proceso decidiera utilizar direcciones físicas de memoria, estar\'iamos en problemas cada vez que se necesite cargar dos procesos que utilicen las mismas direcciones, ya que por ejemplo, el c\'odigo de un proceso podr\'ia pisar variables del otro. Por este y otros motivos normalmente se utiliza memoria virtual.
 
-Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asign\'andole una porci\'on de la memoria f\'isica al proceso. Esta abstracción de la memoria física permite que un programa sea independiente del lugar de memoria donde se ejecute, haciendolo portable. En este esquema, cada proceso tiene su espacio de memoria y no puede acceder a memoria que no le corresponde, evitando que pueda acceder a memoria de otro proceso.
+Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asign\'andole una porci\'on de la memoria f\'isica al proceso. Esta abstracción de la memoria física permite que un programa sea independiente del lugar de memoria donde se ejecute, haciéndolo portable. En este esquema, cada proceso tiene su espacio de memoria y no puede acceder a memoria que no le corresponde, evitando que pueda acceder a memoria de otro proceso.
 
 \subsection{Swapping}
 
@@ -925,11 +926,11 @@ La utilización de memoria virtual nos permite, además de utilizar la memoria r
  \item Si no, elige un proceso en memoria y lo copia a disco (y la MMU actualiza el estado de dicho proceso). Finalmente copia el nuevo proceso en ese espacio de memoria (y la MMU actualiza el estado de dicho proceso).
 \end{itemize}
 
-Para los procesos que estan esperando la respuesta de un dispositivo E/S (grandes candidatos ya que estan en modo waiting), se pueden tomar dos politicas. La primera consiste en no swapearlos nunca, algo que no parece muy ideal, mientras que la segunda es swapearlos y bufferear la respuesta en el espacio de memoria del SO, una vez que el dispositivo haya terminado de copiar datos a memoria, el proceso puede ser swapeado a memoria nuevamente y este buffer copiado al espacio de memoria de dicho proceso.
+Para los procesos que estan esperando la respuesta de un dispositivo E/S (grandes candidatos ya que estan en modo waiting), se pueden tomar dos políticas. La primera consiste en no swapearlos nunca, algo que no parece muy ideal, mientras que la segunda es swapearlos y bufferear la respuesta en el espacio de memoria del SO, una vez que el dispositivo haya terminado de copiar datos a memoria, el proceso puede ser swapeado a memoria nuevamente y este buffer copiado al espacio de memoria de dicho proceso.
 
 \subsection{Fragmentaci\'on}
 
-Existen dos tipos de fragmentaci\'on de la memoria. Cuando vamos asignando bloques de memoria a los procesos, podr\'ia pasarnos que nos quedaran varios bloques libres no contiguos, que alcancen entre todos para satifacer un pedido, pero que ninguno tenga el tama\~no necesario para satifacer el pedido en un s\'olo bloque. Esto se conoce como \textbf{fragmentaci\'on externa}. Si en cambio, un proceso pide por ejemplo 2000 bytes, y la memoria se asigna de a 1KB, entonces se le van a asignar 2KB de memoria al proceso, dejando 48 bytes asignados al proceso que quedan inutilizados. Esto se conoce como \textbf{fragmentaci\'on interna}.
+Existen dos tipos de fragmentaci\'on de la memoria. Cuando vamos asignando bloques de memoria a los procesos, podr\'ia pasarnos que nos quedaran varios bloques libres no contiguos, que alcancen entre todos para satisfacer un pedido, pero que ninguno tenga el tama\~no necesario para satisfacer el pedido en un s\'olo bloque. Esto se conoce como \textbf{fragmentaci\'on externa}. Si en cambio, un proceso pide por ejemplo 2000 bytes, y la memoria se asigna de a 1KB, entonces se le van a asignar 2KB de memoria al proceso, dejando 48 bytes asignados al proceso que quedan inutilizados. Esto se conoce como \textbf{fragmentaci\'on interna}.
 
 Una posible soluci\'on al problema de la fragmentaci\'on es permitir que las direcciones l\'ogicas no mapeen a direcciones f\'isicas contiguas. Una implementaci\'on de esta soluci\'on es la paginaci\'on.
 
@@ -954,19 +955,21 @@ Manejar la memoria con listas enlazadas implica tener una lista de bloques, libr
 
 \subsection{Segmentaci\'on}
 
-% Tenemos dos cuestiones que necesitamos que esten cubiertas: protecci\'on y reubicaci\'on. La primera queda solucionada utilizando una tabla de p\'aginas para cada proceso, para que cada proceso pueda acceder s\'olo a sus p\'aginas.
-% 
-% Una soluci\'on que existe para estos dos problemas es la segmentaci\'on. Un segmento es un espacio de memoria de tama\~no variable, que es direccionado mediante un registro que hace referencia al principio del segmento.
-% 
-% A diferencia de paginaci\'on, donde las p\'aginas son invisibles para el programador, los segmentos son visibles y el programa debe especificar a qu\'e segmento hace referencia cuando quiere acceder a memoria.
-% 
-% Todav\'ia tenemos con segmentaci\'on el problema de la fragmentaci\'on y el swapping. Por eso se suelen combinar la paginaci\'on con la segmentaci\'on.
-
-La segmentación asigna bloques de tamaño fijo a un programa y con un proposito especifico. La memoria física del usuario se divide en segmentos, por ejemplo un segmento de código, otro de heap, otro de stack, etc. La información de cada uno de los segmentos es guardada en una segment table, en donde cada entrada corresponde a un segmento, y guarda la base,  el limite del mismo y los permisos.
+La segmentación asigna bloques de tamaño fijo a un programa y con un propósito especifico. La memoria física del usuario se divide en segmentos, en donde los mismos pueden ser de código, datos o stack. La información de cada uno de los segmentos es guardada en una segment table, en donde cada entrada corresponde a un segmento y guarda la información de la base, el limite y los permisos.
 
 En este modelo la dirección virtual tiene dos partes: ``segmento : offset''. Para resolver la dirección virtual buscamos la entrada de la tabla asociada al segmento requerido y hacemos ``base + offset''.
 
-Intel implementa segmentaci\'on en sus procesadores Pentium con una GDT (Global Descriptor Table) global y una LDT (Local Descriptor Table) para cada proceso. Los registros CS (code segment) y DS (data segment) se denominan selector de segmento y son registros de 16 bits que apuntan a una entrada de la GDT o de la LDT (13 bits para la entrada en la tabla, 1 para indicar a en qu\'e tabla est\'a el descriptor de segmento y 2 para permisos). Una vez cargado el descriptor del segmento, que nos dice donde empieza y cu\'anto mide el segmento, se obtiene por un registro mediante el cual se direcciona, el offset en el segmento y, chequeando previamente que el offset sea v\'alido, se convierte la direcci\'on l\'ogica en direcci\'on lineal.
+\subsubsection{Segmentación en x86}
+Intel implementa segmentaci\'on en sus procesadores Pentium con una GDT (Global Descriptor Table) global y una LDT (Local Descriptor Table) que contiene los segmentos privados para cada proceso. La GDT y LDT cumplen la funcion de segment table, en donde se guardan la informacion de los segmentos. En la GDT se guardan los segmentos globales que todos los procesos pueden acceder mientras que en la LDT se guardan los segmentos propios al proceso que esta corriendo, esta tabla se cambia cuando se ejecuta un context switch, por lo que si un proceso quiere acceder a la memoria de otro no va a poder hacerlo, ya que no hay una entrada que le permita realizar el direccionamiento.
+
+Los registros CS (code segment) y DS (data segment) se denominan selector de segmento y son registros de 16 bits que apuntan a una entrada de la GDT o de la LDT (13 bits para la entrada en la tabla, 1 para indicar a en qu\'e tabla est\'a el descriptor de segmento y 2 para permisos). Estos registros son parte del CPU y son utilizados por los procesos para seleccionar entre distintos segmentos. Una vez cargado el descriptor del segmento, que nos dice donde empieza y cu\'anto mide el segmento, se obtiene por un registro mediante el cual se direcciona, el offset en el segmento y, chequeando previamente que el offset sea v\'alido, se convierte la direcci\'on l\'ogica en direcci\'on física.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{imgs/memory_segmentation.png}
+    \caption{Resolución de una dirección física utilizando un esquema de memoria virtual por segmentos. La segment table en una arquitectura como x86 es ocupada por la GDT o LDT.}
+    \label{fig:memory_segmentation}
+\end{figure}
 
 \subsection{Paginaci\'on}
 
@@ -975,10 +978,17 @@ La paginaci\'on consiste en dividir la memoria virtual (o l\'ogica) en bloques d
 Las páginas pueden ser guardadas a disco para realizar swapping. Si en el momento de pedir una p\'agina, esta no se encuentra en memoria, se produce una page fault (excepci\'on del sistema operativo), y la rutina de atenci\'on se encarga de cargar la p\'agina en memoria. 
 
 \subsubsection{Tabla de páginas}
-Para saber si una p\'agina est\'a en memoria y en qu\'e frame se encuentra, la MMU guarda una tabla de p\'aginas con una entrada por cada p\'agina. En cada entrada entre diversos datos se guarda un bit que indica si la p\'agina est\'a cargada en memoria y el \'indice del frame en el que est\'a cargada. Adem\'as se guardan bits que indican, por ejemplo, si la p\'agina fue modificada luego de ser cargada en memoria, para saber si guardarla en disco al desalojarla o simplemente descartarla y quedarse con la versi\'on que ya hab\'ia en disco. Es importante aclarar que hay una tabla de p\'aginas para cada proceso, es decir, si tenemos $N$ procesos tendremos $N$ tablas de p\'aginas. Esto nos introduce un problema: si por ejemplo tuviesemos 4GB de memoria, y p\'aginas de 4KB, tendr\'iamos una tabla de p\'aginas con un mill\'on de entradas; y esto estaria replicado para cada proceso. 
+Para saber si una p\'agina est\'a en memoria y en qu\'e frame se encuentra, la MMU guarda una tabla de p\'aginas con una entrada por cada p\'agina. En cada entrada entre diversos datos se guarda un bit que indica si la p\'agina est\'a cargada en memoria y el \'indice del frame en el que est\'a cargada. Adem\'as se guardan bits que indican, por ejemplo, si la p\'agina fue modificada luego de ser cargada en memoria, para saber si guardarla en disco al desalojarla o simplemente descartarla y quedarse con la versi\'on que ya hab\'ia en disco. Es importante aclarar que hay una tabla de p\'aginas para cada proceso, es decir, si tenemos $N$ procesos tendremos $N$ tablas de p\'aginas. Esto nos introduce un problema: si por ejemplo tuviésemos 4GB de memoria, y p\'aginas de 4KB, tendr\'iamos una tabla de p\'aginas con un mill\'on de entradas; y esto estaría replicado para cada proceso. 
 
 \subsubsection{Directorio de tablas de páginas}
-Se suele dividir las tablas en dos niveles: un directorio de tablas de p\'aginas que apunta a tablas de p\'aginas, a su vez cada una de estas tablas de paginas tendran en sus entradas las paginas que seran utilizadas por el programa. As\'i, si un proceso usa menos de 4MB de memoria, y las p\'aginas ocupan 4KB, entonces podemos tener un directorio de tablas de p\'aginas con 1024 entradas, una de ellas apuntando a una tabla de p\'aginas con 1024 entradas, y podemos direccionar los 4MB (1024 p\'aginas de 4KB) con tan solo 8KB (4KB del directorio de tablas y 4KB de la \'unica tabla).
+Se suele dividir las tablas en dos niveles: un directorio de tablas de p\'aginas que apunta a tablas de p\'aginas, a su vez cada una de estas tablas de paginas tendrán en sus entradas las paginas que serán utilizadas por el programa. As\'i, si un proceso usa menos de 4MB de memoria, y las p\'aginas ocupan 4KB, entonces podemos tener un directorio de tablas de p\'aginas con 1024 entradas, una de ellas apuntando a una tabla de p\'aginas con 1024 entradas, y podemos direccionar los 4MB (1024 p\'aginas de 4KB) con tan solo 8KB (4KB del directorio de tablas y 4KB de la \'unica tabla).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{imgs/memory_multi_level_paging.png}
+    \caption{Resolución de una dirección física utilizando paginacion multinivel.}
+    \label{fig:memory_multi_level_paging}
+\end{figure}
 
 \subsubsection{TLB}
 Una de las desventajas de paginaci\'on es que, al tener que convertir las direcciones virtuales en f\'isicas, direccionar una p\'agina puede ser lento, ya que requiere 3 direccionamientos a memoria (directorio, tabla, pagina). Esto en consecuencia hace que obtener instrucciones o datos de la memoria sea m\'as lento. La soluci\'on que se encontr\'o a este problema es una peque\~na cach\'e que se denomina \textbf{Translation Lookaside Buffer (TLB)}. La TLB, tambi\'en conocida como memoria asociativa, contiene el frame en el que se encuentran las p\'aginas m\'as usadas. Al buscar una p\'agina en memoria, lo primero que se hace es buscarla en el TLB, y en caso de que se encuentre presente en el mismo, el acceso a la p\'agina es mucho m\'as r\'apido.
@@ -989,24 +999,11 @@ Como con paginación todos los bloques son frames del mismo tamaño (el tamaño 
 
 Algunos de estos algoritmos pueden ser utilizados como medidas para evitar \textbf{trashing}, es decir, la situación en donde el SO ocupa mas tiempo swapeando páginas que la CPU ejecutando procesos. Esto puede darse cuando la memoria esta llena y hay una alta contención entre los procesos al cargar sus paginas en memoria. Para atenuar los efectos del trashing pueden utilizarse algoritmos de reemplazo local, ya que estos algoritmos obligan al proceso a desalojar sus propias paginas. 
 
-Estudiando mas de cerca los procesos, podremos darnos cuenta que en cada momento un proceso utiliza un determinado subconjunto de páginas de forma intensiva, llamado \textbf{working set}, hasta que en algun punto lo cambia practicamente en su totalidad. Este comportamiento suele repetirse a lo largo de la ejecucion del proceso. Es por esto que los algoritmos de reemplazo local son utiles para atenar los efectos del trashing.
+Estudiando mas de cerca los procesos, podremos darnos cuenta que en cada momento un proceso utiliza un determinado subconjunto de páginas de forma intensiva, llamado \textbf{working set}, hasta que en algún punto lo cambia prácticamente en su totalidad. Este comportamiento suele repetirse a lo largo de la ejecución del proceso. Es por esto que los algoritmos de reemplazo local son útiles para atenar los efectos del trashing.
 
 \subsubsection{Algoritmo \'Optimo}
 
-El algoritmo \'optimo de reemplazo de p\'aginas consiste en desalojar de la memoria siempre la p\'agina que va a ser referenciada m\'as tarde, o alguna p\'agina que no vaya a ser nunca m\'as referenciada si existe. Este algoritmo es imposible de implementar pero se usa para comparar con los otros algoritmos a la hora de medir performance.
-
-\subsubsection{Not Recently Used}
-
-Las tablas de p\'aginas suelen guardar dos bits R y M que indican si la p\'agina fue referenciada y/o modificada respectivamente desde el momento en el que se carg\'o en memoria. Ambos bits son generalmente seteados por hardware en cada acceso a memoria y el bit R es reseteado peri\'odicamente por el sistema operativo. Las p\'aginas se dividen en cuatro categor\'ias seg\'un los bits R y M:
-
-\begin{enumerate}
-\item Ni referenciadas ni modificadas.
-\item Modificadas pero no referenciadas (puede pasar cuando el bit R se resetea).
-\item Referenciadas pero no modifcadas.
-\item Referenciadas y modificadas.
-\end{enumerate}
-
-El algoritmo Not Recently Used (NRU) desaloja de memoria una p\'agina al azar de la categor\'ia m\'as baja en la que haya al menos una p\'agina. La idea es que las p\'aginas que fueron referenciadas recientemente son m\'as propensas a ser referenciadas nuevamente, y para desempatar, es siempre m\'as costoso desalojar una p\'agina modificada, ya que hay que guardarla a disco.
+El algoritmo \'optimo de reemplazo de p\'aginas consiste en desalojar de la memoria siempre la p\'agina que va a ser referenciada m\'as tarde, o alguna p\'agina que no vaya a ser nunca m\'as referenciada si existe. Este algoritmo es imposible de implementar pero se utiliza como parámetro de comparación a la hora de medir la performance de otros algoritmos.
 
 \subsubsection{First In First Out}
 
@@ -1022,14 +1019,40 @@ Es muy parecido a Second Chance, pero en vez de guardar una cola, guarda una lis
 
 \subsubsection{Least Recently Used}
 
-El algoritmo Least Recently Used desaloja siempre la p\'agina que fue usada hace m\'as tiempo. En vez de guardar el momento en el que fue cargada en memoria, como en FIFO, guarda el momento en el que fue referenciada por \'ultima vez.
+El algoritmo Least Recently Used desaloja siempre la p\'agina que fue usada hace m\'as tiempo. En vez de guardar el momento en el que fue cargada en memoria, como en FIFO, guarda el momento en el que fue referenciada por \'ultima vez. Dos implementaciones clásicas de este algoritmo son asociando un contador a cada pagina o manteniendo una lista LRU, ambas costosas en términos de hardware ya que se tanto los contadores como la lista tienen que actualizarse en cada escritura y lectura de pagina.
+
+
+\subsubsection{Not Recently Used}
+
+Las tablas de p\'aginas suelen guardar dos bits R y M que indican si la p\'agina fue referenciada y/o modificada respectivamente desde el momento en el que se carg\'o en memoria. Ambos bits son generalmente seteados por hardware en cada acceso a memoria y el bit R es reseteado peri\'odicamente por el sistema operativo. Las p\'aginas se dividen en cuatro categor\'ias seg\'un los bits R y M:
+
+\begin{enumerate}
+\item Ni referenciadas ni modificadas.
+\item Modificadas pero no referenciadas (puede pasar cuando el bit R se resetea).
+\item Referenciadas pero no modificadas.
+\item Referenciadas y modificadas.
+\end{enumerate}
+
+El algoritmo Not Recently Used (NRU) desaloja de memoria una p\'agina al azar de la categor\'ia m\'as baja en la que haya al menos una p\'agina. La idea es que las p\'aginas que fueron referenciadas recientemente son m\'as propensas a ser referenciadas nuevamente, y para desempatar, es siempre m\'as costoso desalojar una p\'agina modificada, ya que hay que guardarla a disco.
+
+\subsection{Fragmentación con paginación}
+
+Como vimos anteriormente paginación es un método mucho mas dócil y sencillo que segmentación, por ello es utilizado en los sistemas modernos. Sin embargo, la segmentación no puede ser desactivada en las arquitecturas modernas, por lo que se implementa lo que se llama ``flat segmentation''. Los sistemas operativos modernos normalmente definen 4 segmentos: Kernel Code Segment, Kernel Data Segment, User Code Segment y User Data Segment. Son segmentos grandes que totalizándolos ocupan toda la memoria y no hacen mas que dividir a grandes rasgos la misma, principalmente entre memoria de kernel y memoria de procesos usuarios.
+
+Luego, durante la resolución se resuelve la dirección lineal utilizando la dirección lógica, calculándola utilizando el descriptor de segmento, y luego se resuelve la dirección física utilizando la dirección lineal, utilizando la paginación multinivel.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{imgs/memory_paged_segmentation.png}
+    \caption{Resolución de una dirección física utilizando fragmentación con paginación multinivel.}
+    \label{fig:memory_paged_segmentation}
+\end{figure}
 
 \subsection{Copy on Write}
 
-Como vimos anteriormente, un proceso puede crear otros procesos mediante la system call $fork$. Cuando un proceso crea otro proceso, ambos comparten la memoria que ten\'ia el proceso padre. Existen dos opciones para manejar la memoria en este caso: Una de ellas consiste en copiar toda la memoria y tener dos copias de los mismos datos y el mismo c\'odigo en memoria desde el principio, y la otra es hacer la copia en alg\'un momento entre que se crea el proceso y se necesita escribir la memoria.
+Como vimos anteriormente, un proceso puede crear otros procesos mediante la system call $fork$. Cuando un proceso crea otro proceso, ambos comparten la memoria que ten\'ia el proceso padre. Existen dos opciones para manejar la memoria en este caso: una de ellas consiste en copiar toda la memoria y tener dos copias de los mismos datos y el mismo c\'odigo en memoria desde el principio, y la otra es hacer la copia en alg\'un momento entre que se crea el proceso y se necesita escribir la memoria.
 
 Cuando el sistema operativo decide copiar la memoria al momento en el que uno de los dos proceso decide escribirla, se dice que estamos haciendo Copy on Write.
-
 
 \section{Sistemas distribuidos}
 
