@@ -898,19 +898,34 @@ RAID no proteje contra eventos como borrar accidentalmente un archivo, por eso s
 
 \section{Memoria}
 
+La \textbf{Memory Management Unit (MMU)}, es el módulo del sistema operativo encargado del manejo de memoria. El manejo se realizará dependiendo de las características del sistema operativo.
+
 \subsection{Direcciones f\'isicas vs. direcciones l\'ogicas}
 
 La memoria puede verse como una tira de bytes consecutivos. Cada uno de estos bytes tiene una direcci\'on (enteros consecutivos empezando desde el cero) mediante la cual se pueden acceder. Esta direcci\'on se denomina direcci\'on f\'isica.
 
-Cada vez que ejecutamos un proceso, este accede a memoria para cargar su c\'odigo, sus variables, y toda la informaci\'on restante que necesite guardar. Si cada proceso decidiera utilizar direcciones espec\'ificas de la memoria, estar\'iamos en problemas cada vez que querramos cargar dos procesos que utilicen la misma direcci\'on de memoria, ya que por ejemplo, el c\'odigo de un proceso podr\'ia pisar variables del otro. Para resolver este problema tenemos la \textbf{Memory Management Unit (MMU)}, que es la unidad que se encarga de manejar la memoria. Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asign\'andole una porci\'on de la memoria f\'isica al proceso.
+Cada vez que ejecutamos un proceso, este accede a memoria para cargar su c\'odigo, sus variables, y toda la informaci\'on restante que necesite guardar. Si cada proceso decidiera utilizar direcciones físicas de memoria, estar\'iamos en problemas cada vez que se necesite cargar dos procesos que utilicen las mismas direcciones, ya que por ejemplo, el c\'odigo de un proceso podr\'ia pisar variables del otro. Por este y otros motivos normalmente se utiliza memoria virtual.
 
-Cada proceso tiene su espacio de memoria y no puede acceder a memoria que no le corresponde. De esta manera evitamos que un proceso pueda acceder a memoria de otro proceso.
+Cada vez que un proceso quiere acceder a memoria, utiliza lo que se denomina una direcci\'on l\'ogica (o virtual) y es la MMU la que se encarga de transformarla en una direcci\'on f\'isica, asign\'andole una porci\'on de la memoria f\'isica al proceso. Esta abstracción de la memoria física permite que un programa sea independiente del lugar de memoria donde se ejecute, haciendolo portable. En este esquema, cada proceso tiene su espacio de memoria y no puede acceder a memoria que no le corresponde, evitando que pueda acceder a memoria de otro proceso.
 
 \subsection{Swapping}
 
-Si tenemos muchos procesos ejecut\'andose en paralelo, y cada uno de estos procesos consume mucha memoria, puede pasarnos que no entren todos los procesos en memoria. Para solucionar esto, existe una t\'ecnica llamada swapping, que consiste en pasar parte de la memoria a disco, para poder cargar otros fragmentos en memoria.
+La utilización de memoria virtual nos permite, además de utilizar la memoria ram de manera mas eficiente, utilizar el disco rígido como extensión de la misma. Esto puede ser conveniente en los casos en los que la carga del sistema sea alta, es decir que haya muchos procesos corriendo de forma simultanea en el sistema, o en los casos que varios procesos utilicen mucha memoria. La forma puntual de realizar esto depende de la implementación de memoria virtual utilizada, pero a grandes rasgos los pasos ejecutados son:
 
-El problema es que hacer swapping es lento porque requiere acceso a disco, que es mucho m\'as lento que la memoria.
+\begin{itemize}
+ \item El scheduler elige un proceso de la cola ready, y le pide al dispatcher que lo ponga a ejecutar.
+ \item El dispatcher se da cuenta (por medio de la MMU) que el proceso está en disco.
+ \item Si (la MMU indica que) hay espacio suficiente en memoria, lo lee de disco y lo carga.
+ \item Si no, elige un proceso en memoria y lo copia a disco (y la MMU actualiza el estado de dicho proceso). Finalmente copia el nuevo proceso en ese espacio de memoria (y la MMU actualiza el estado de dicho proceso).
+\end{itemize}
+
+Para los procesos que estan esperando la respuesta de un dispositivo E/S (grandes candidatos ya que estan en modo waiting), se pueden tomar dos politicas. La primera consiste en no swapearlos nunca, algo que no parece muy ideal, mientras que la segunda es swapearlos y bufferear la respuesta en el espacio de memoria del SO, una vez que el dispositivo haya terminado de copiar datos a memoria, el proceso puede ser swapeado a memoria nuevamente y este buffer copiado al espacio de memoria de dicho proceso.
+
+\subsection{Fragmentaci\'on}
+
+Existen dos tipos de fragmentaci\'on de la memoria. Cuando vamos asignando bloques de memoria a los procesos, podr\'ia pasarnos que nos quedaran varios bloques libres no contiguos, que alcancen entre todos para satifacer un pedido, pero que ninguno tenga el tama\~no necesario para satifacer el pedido en un s\'olo bloque. Esto se conoce como \textbf{fragmentaci\'on externa}. Si en cambio, un proceso pide por ejemplo 2000 bytes, y la memoria se asigna de a 1KB, entonces se le van a asignar 2KB de memoria al proceso, dejando 48 bytes asignados al proceso que quedan inutilizados. Esto se conoce como \textbf{fragmentaci\'on interna}.
+
+Una posible soluci\'on al problema de la fragmentaci\'on es permitir que las direcciones l\'ogicas no mapeen a direcciones f\'isicas contiguas. Una implementaci\'on de esta soluci\'on es la paginaci\'on.
 
 \subsection{Asignaci\'on din\'amica de la memoria}
 
@@ -925,31 +940,28 @@ Cuando hacemos swapping, o tambi\'en cuando cargamos procesos en memoria y cuand
 
 Existen dos m\'etodos que son los m\'as comunes para almacenar la informaci\'on sobre los bloques libres y ocupados de la memoria. Uno de ellos son los bitmaps y el otro las listas enlazadas.
 
+\subsubsection{Bitmaps}
 Cuando manejamos la memoria con bitmaps (mapas de bits) tenemos un bit por cada unidad de memoria que queremos asignar. Si por ejemplo, asignamos de a 32 bits, entonces $\frac{1}{33}$ de la memoria va a estar ocupada por el bitmap. Cada bit del bitmap es 0 si la unidad de memoria que representa est\'a libre, y 1 si est\'a ocupada. El problema que tiene este enfoque es que es bastante costoso encontrar bloques grandes de memoria. Tambi\'en hay un trade-off entre el tama\~no de la unidad m\'inima de asignaci\'on de memoria (que si es muy grande puede llevar a desperdiciar mucha memoria) y el tama\~no del bitmap (que si asigna unidades muy chicas de memoria puede ocupar una porci\'on significativa de la misma).
-
+ 
+\subsubsection{Listas enlazadas}
 Manejar la memoria con listas enlazadas implica tener una lista de bloques, libre o reservados, en la que en cada campo de la lista se indica el tama\~no del bloque, d\'onde empieza el bloque en memoria, y si est\'a libre u ocupado. En este caso es f\'acil asignar memoria ya que si se hace al principio o al final de un bloque (es lo m\'as com\'un) s\'olo hay que dividir una entrada de la lista en dos, la parte que ocupamos y la parte que queda libre. Liberar memoria es un poco m\'as complicado pero no tanto, s\'olo hay que tener en cuenta cuatro casos, que son las dos posibilidades para el bloque anterior (libre u ocupado) y las mismas dos posibilidades para el bloque siguiente. En caso de que el bloque anterior y/o el siguiente est\'en libres, entonces hay que mergear dos o tres entradas de la lista en una sola entrada correspondiente a un bloque libre.
-
-\subsection{Fragmentaci\'on}
-
-Existen dos tipos de fragmentaci\'on de la memoria. Cuando vamos asignando bloques de memoria a los procesos, podr\'ia pasarnos que nos quedaran varios bloques libres no contiguos, que alcancen entre todos para satifacer un pedido, pero que ninguno tenga el tama\~no necesario para satifacer el pedido en un s\'olo bloque. Esto se conoce como fragmentaci\'on externa. Si en cambio, un proceso pide por ejemplo 2000 bytes, y la memoria se asigna de a 1KB, entonces se le van a asignar 2KB de memoria al proceso, dejando 48 bytes asignados al proceso que quedan inutilizados. Esto se conoce como fragmentaci\'on interna.
-
-Una posible soluci\'on al problema de la fragmentaci\'on es permitir que las direcciones l\'ogicas no mapeen a direcciones f\'isicas contiguas. Una implementaci\'on de esta soluci\'on es la paginaci\'on.
 
 \subsection{Paginaci\'on}
 
-La paginaci\'on consiste en dividir la memoria virtual (o l\'ogica) en bloques de un tama\~no fijo (generalmente 4KB) llamados p\'aginas, y la memoria f\'isica en bloques del mismo tama\~no llamados frames.
+La paginaci\'on consiste en dividir la memoria virtual (o l\'ogica) en bloques de un tama\~no fijo (generalmente 4KB) llamados p\'aginas, y la memoria f\'isica en bloques del mismo tama\~no llamados \textbf{frames}. La MMU es la que se encarga de asignar p\'aginas a frames, y las direcciones l\'ogicas est\'an compuestas por una parte que representa el n\'umero de p\'agina, y otra parte que representa el offset dentro de la p\'agina. Es por esto que las p\'aginas siempre deben medir una cantidad de bytes que sean potencias de dos, para poder dividir la direcci\'on en bits de n\'umero de p\'agina y bits de offset.
 
-Cuando hay paginaci\'on, la MMU es la que se encarga de asignar p\'aginas a frames, y las direcciones l\'ogicas est\'an compuestas por una parte que representa el n\'umero de p\'agina, y otra parte que representa el offset dentro de la p\'agina. Es por esto que las p\'aginas siempre deben medir una cantidad de bytes que sean potencias de dos, para poder dividir la direcci\'on en bits de n\'umero de p\'agina y bits de offset.
+Las páginas pueden ser guardadas a disco para realizar swapping. Si en el momento de pedir una p\'agina, esta no se encuentra en memoria, se produce una page fault (excepci\'on del sistema operativo), y la rutina de atenci\'on se encarga de cargar la p\'agina en memoria. 
 
-Con paginaci\'on las p\'aginas que no est\'an en memoria son guardadas en disco, si en el momento de pedir una p\'agina, esta no se encuentra en memoria, se produce una page fault, que es una excepci\'on del sistema operativo, y la rutina de atenci\'on se encarga de cargar la p\'agina en memoria.
+\subsubsection{Tabla de páginas}
+Para saber si una p\'agina est\'a en memoria y en qu\'e frame se encuentra, la MMU guarda una tabla de p\'aginas con una entrada por cada p\'agina. En cada entrada entre diversos datos se guarda un bit que indica si la p\'agina est\'a cargada en memoria y el \'indice del frame en el que est\'a cargada. Adem\'as se guardan bits que indican, por ejemplo, si la p\'agina fue modificada luego de ser cargada en memoria, para saber si guardarla en disco al desalojarla o simplemente descartarla y quedarse con la versi\'on que ya hab\'ia en disco. Es importante aclarar que hay una tabla de p\'aginas para cada proceso, es decir, si tenemos $N$ procesos tendremos $N$ tablas de p\'aginas. Esto nos introduce un problema: si por ejemplo tuviesemos 4GB de memoria, y p\'aginas de 4KB, tendr\'iamos una tabla de p\'aginas con un mill\'on de entradas; y esto estaria replicado para cada proceso. 
 
-Para saber si una p\'agina est\'a en memoria, y en caso de que est\'e, en qu\'e frame est\'a, la MMU guarda una tabla de p\'aginas, con una entrada por cada p\'agina, en las que se guarda entre otras cosas, un bit que indica si la p\'agina est\'a cargada en memoria, y el \'indice del frame en el que est\'a cargada. Adem\'as se guardan bits que indican, por ejemplo, si la p\'agina fue modificada luego de ser cargada en memoria, para saber si guardarla en disco al desalojarla o simplemente descartarla y quedarse con la versi\'on que ya hab\'ia en disco.
+\subsubsection{Directorio de tablas de páginas}
+Se suele dividir las tablas en dos niveles: un directorio de tablas de p\'aginas que apunta a tablas de p\'aginas, a su vez cada una de estas tablas de paginas tendran en sus entradas las paginas que seran utilizadas por el programa. As\'i, si un proceso usa menos de 4MB de memoria, y las p\'aginas ocupan 4KB, entonces podemos tener un directorio de tablas de p\'aginas con 1024 entradas, una de ellas apuntando a una tabla de p\'aginas con 1024 entradas, y podemos direccionar los 4MB (1024 p\'aginas de 4KB) con tan solo 8KB (4KB del directorio de tablas y 4KB de la \'unica tabla).
 
-Si por ejemplo tuviesemos 4GB de memoria, y p\'aginas de 4KB, tendr\'iamos una tabla de p\'aginas con un mill\'on de entradas. Adem\'as, la tabla de p\'aginas es propia de cada proceso, es decir, si tenemos $N$ procesos, tenemos $N$ tablas de p\'aginas, por lo que gran parte de la memoria estar\'ia ocupada por tablas de p\'aginas. Para solucionar este problema, se suele dividir las tablas en dos niveles: un directorio de tablas de p\'aginas que apunta a tablas de p\'aginas y una tabla de p\'aginas por cada entrada del directorio de tablas de p\'aginas. As\'i, si un proceso usa menos de 4MB de memoria, y las p\'aginas ocupan 4KB, entonces podemos tener un directorio de tablas de p\'aginas con 1024 entradas, una de ellas apuntando a una tabla de p\'aginas con 1024 entradas, y podemos direccionar los 4MB (1024 p\'aginas de 4KB) con tan solo 8KB (4KB del directorio de tablas y 4KB de la \'unica tabla).
-
+\subsubsection{TLB}
 Una de las desventajas de paginaci\'on es que, al tener que convertir las direcciones virtuales en f\'isicas, direccionar una p\'agina puede ser un poco lento, ya que requiere ir a buscar la p\'agina a la tabla de p\'aginas, lo que implica un direccionamiento a memoria, y despu\'es buscar la p\'agina en el frame que corresponda, es decir, otro direccionamiento a memoria. El necesitar de dos direccionamientos a memoria (o tres en el caso de dos niveles de tablas) hace que obtener instrucciones o datos de la memoria sea m\'as lento. La soluci\'on que se encontr\'o a este problema es una peque\~na cach\'e que se denomina \textbf{Translation Lookaside Buffer (TLB)}. La TLB, tambi\'en conocida como memoria asociativa, contiene el frame en el que se encuentran las p\'aginas m\'as usadas. Al buscar una p\'agina en memoria, lo primero que se hace es buscarla en el TLB, y en caso de que se encuentre presente en el mismo, el acceso a la p\'agina es mucho m\'as r\'apido.
 
-\subsection{Reemplazo de p\'aginas}
+\subsection{Reemplazo de p\'aginas (swapping)}
 
 Si implementamos paginaci\'on, nos ahorramos el problema de decidir en qu\'e bloque de memoria libre cargar una p\'agina, ya que todos los bloques son frames del mismo tama\~no (el tama\~no de las p\'aginas), pero en caso de que no haya suficiente memoria libre, debemos decidir de alguna manera qu\'e p\'aginas desalojar de memoria.
 
@@ -992,7 +1004,7 @@ El algoritmo Least Recently Used desaloja siempre la p\'agina que fue usada hace
 
 \subsection{Segmentaci\'on}
 
-Tenemos dos problemas que surgen ahora: protecci\'on y reubicaci\'on. El primero podemos solucionarlo con una tabla de p\'aginas para cada proceso, para que cada proceso pueda acceder s\'olo a sus p\'aginas, pero todav\'ia nos queda el segundo.
+Tenemos dos cuestiones que necesitamos que esten cubiertas: protecci\'on y reubicaci\'on. La primera queda solucionada utilizando una tabla de p\'aginas para cada proceso, para que cada proceso pueda acceder s\'olo a sus p\'aginas.
 
 Una soluci\'on que existe para estos dos problemas es la segmentaci\'on. Un segmento es un espacio de memoria de tama\~no variable, que es direccionado mediante un registro que hace referencia al principio del segmento.
 
