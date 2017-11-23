@@ -1054,6 +1054,73 @@ Como vimos anteriormente, un proceso puede crear otros procesos mediante la syst
 
 Cuando el sistema operativo decide copiar la memoria al momento en el que uno de los dos proceso decide escribirla, se dice que estamos haciendo Copy on Write.
 
+\section{Protección y seguridad}
+
+La protección se trata de mecanismos para asegurarse de que nadie pueda acceder a los datos del otro (por ejemplo, que un proceso no pueda acceder fuera de su espacio de memoria. También se trata de tener un sistema de autorización que nos permita controlar qué usuario puede hacer cada cosa (por ejemplo, que un proceso no pueda ejecutar cierta parte de la memoria, si no tiene permiso).
+
+La seguridad se trata de asegurarse que quien dice ser cierto usuario, lo sea (por ejemplo, autenticar un usuario en un SO). También se trata de impedir la destrucción o adulteración de los datos.
+
+\subsection{Seguridad de la información}
+
+En seguridad de la información intentaremos preservar la confidencialidad, integridad y disponibilidad de datos. Para el estudio de estas propiedades es util tener ciertas abstracciones. Un sistema de seguridad suele tener sujetos, acciones y objetos. La idea es responder: ¿Qué sujetos pueden realizar qué acciones sobre qué objetos?
+
+Como los sujetos, o usuarios, por lo general pertenecen a un grupo (usuarios comunes, administradores, etc), se suelen agrupar en grupos o tener roles. Estos grupos o roles son sujetos del sistema de permisos que nos permite definir la forma de actuar de ciertos sujetos ante ciertos objetos.
+
+\subsubsection{Protocolo AAA}
+
+El protocolo AAA obtiene sus siglas por: Authentication, Authorization y Accounting, que son los pilares fundamentales para cualquier sistema seguro. 
+
+La autentificación nos habla de que una entidad pruebe su identidad ante otra entidad y consiste en la presentación de una propuesta de identidad (por ejemplo un nombre de usuario) y la demostración de credenciales que permiten comprobarla (por ejemplo contraseñas o medios biométricos). La autorización expresa la posibilidad de un sistema de definir qué puede hacer una entidad, en función de su identidad (qué privilegios le doy). Finalmente la contabilidad (accounting), es la habilidad del sistema para dejar registrado que hizo una entidad. El nivel de granularidad de este registro dependerá de forma arbitraria de los que crearon dicho sistema, sin embargo a mayor nivel de granularidad, mas seguro resulta ser el sistema.
+
+\subsection{Autentificación}
+
+En la autentificación de usuarios se utiliza mucho la criptografía ya que, es la rama de la matemática y computación que se ocupa de cifrar/descifrar información utilizando métodos que permitan el intercambio de mensajes de manera que sólo puedan ser leídos por las personas a quienes van dirigidos. De esta manera nos aseguramos que las credenciales de un usuario permanezcan confidenciales.
+
+Por otro lado, también tendremos el criptoanálisis, el cual es el estudio de los métodos que se utilizan para quebrar textos cifrados, con el objeto de recuperar la información original, en ausencia de la clave.
+
+\subsubsection{Funciones de hash}
+
+Son funciones no inversibles que convierten una cadena de caracteres en otra, es decir, que no se puede obtener la pre-imagen (la cadena original) a partir del valor de hash. Son útiles porque, por ejemplo, dado el hash de una contraseña, no queremos que se pueda recuperar la contraseña.
+
+Estas funciones tienen ser resistente a colisiones, es decir que sea difícil encontrar dos elementos distintos cuyo hash sea el mismo (colisión). Porque, por ejemplo, si al autenticarme se verifica el hash de mi contraseña, no quiero que haya otra contraseña distinto cuyo hash sea el mismo.
+
+Las funciones de hash son útiles para almacenar contraseñas, ya que las mismas conviene  guardarlas de modo tal que no se puedan leer, pero estas funciones nos permiten de todas formas comparar una contraseña ingresada con el original almacenado, utilizando la misma funcion de hash para la contraseña entrante y comparando el resultado. Para asegurar un mayor nivel de seguridad debe usarse salt e iterar la función de hash varias veces. 
+
+Un \textbf{salt} no es mas que una cadena de caracteres que se le agrega a la contraseña para, que en el caso que se quiera ejecutar un ataque de fuerza bruta sobre el hash, no se obtenga la contraseña original. 
+
+Para implementar salt, para cada password p se toma una cadena al azar s (llamada salt). El hash que se almacena es $h(s.p)$ (el de $s$ concatenada con $p$). Como $s$ es aleatorio, $h(s.p)$ es un hash raro que seguro no está en la lista del atacante. No es necesario que la cadena de salt sea secreta, por lo que puede ser almacenada junto con $h(s.p)$. La necesitamos para verificar las contraseñas enviadas por los usuarios. Notar que aún teniendo el $s$ de cada $p$, un atacante no puedeejecutar su ataque tan fácilmente. Ahora, para descifrar una password $p$, tiene que concatenar su salt $s$ a cada password típica $p'$ y verificar si $h(s.p') = h(s.p)$.
+
+Un \textbf{ataque a una función de hash} consiste en probar a lo bruto preimágenes. Si a una password le pasamos $10000$ veces una función de hash (i.e. $h^{10000}(p)$), ahora el atacante para cada prueba tiene que hashear $10000$ veces, lo cual hace que el ataque sea $10000$ veces más lento.
+
+\subsubsection{Algoritmos de encriptación}
+
+Tendremos dos tipos de algoritmos de encriptación: simétricos y asimétricos.
+
+Los algoritmos de encriptación simétricos son aquellos que utilizan la misma clave para encriptar y desencriptar. La clave sólo la deben conocer los extremos de la comunicación. Por ejemplo: Caesar, DES, Blowfish, AES.
+
+Los algoritmos de encriptación asimétricos usan claves distintas. Una de ellas es pública, que puede conocer todo el mundo, y la otra es privada, que sólo conoce el receptor de un mensaje. Por ejemplo: RSA.
+
+\textbf{RSA} es el método de encriptación asimétrica más popular. Produce una clave pública, que puedo publicar, y una privada, que debo mantener secreta: $D(E(m, publica), privada) = m$, $D(E(m, privada), publica) = m$. Para que alguien me mande un mensaje, lo encripta usando mi clave pública y me lo manda. Solo yo lo puedo leer porque la única forma dedesencriptarlo es con mi clave privada. La seguridad de este método se basa en la dificultad para factorizar enteros grandes.
+
+Por otro lado, tendremos la \textbf{firma digital con RSA} que se utiliza para asegurarme que un documento es auténtico (que nadie lo cambió). Para obtener una firma digital se calcula el hash del documento que estoy firmando, y se encripta este hash con mi clave privada.La firma digital se agrega al documento original. El receptor lo desencripta con mi clave pública (está confiando que la clave pública es efectivamente la mía), y si lo puede desencriptar exitosamente, entonces el dueño de la clave pública es efectivamente el autor del documento. Luego, verifica que el hash obtenido de la desencripción se corresponda con el del documento para asegurarse que no se haya alterado.
+
+\subsubsection{Autenticación remota con hash}
+
+La autenticación remota con hash es una forma de autenticación remota de un cliente C en un servidor S. Una posible implementación podría ser la siguiente:
+\begin{itemize}
+ \item S le manda su clave pública a C para que encripte su password con dicha clave.
+ \item C hace lo que S le pide y le manda el resultado.
+ \item S desencripta con su clave privada y corrobora la clave de C.
+\end{itemize}
+
+Si bien este procedimiento nos brinda cierta seguridad sobre la identidad del cliente, es propenso a un Replay attack: si un atacante M intercepta el mensaje de C a S, entonces M puede autenticarse como C. La solución es utilizar algo llamado Challenge-Response:
+
+\begin{itemize}
+ \item Cada vez que C se quiere autenticarse ante S, S elige un número al azar (session token), y se lo manda a C para que encripte su contraseña usando el número al azar como semilla.
+ \item C hace lo que S le pide y le manda el resultado.
+ \item Ahora a M no le sirve de nada interceptar ese resultado y enviárselo a S para hacerse pasar por C, porque cuando M se comunique con S, S le va a mandar otra semilla.
+\end{itemize}
+
 \section{Sistemas distribuidos}
 
 \subsection{¿Qu\'e son los sistemas distribuidos?}
