@@ -946,6 +946,22 @@ Cuando manejamos la memoria con bitmaps (mapas de bits) tenemos un bit por cada 
 \subsubsection{Listas enlazadas}
 Manejar la memoria con listas enlazadas implica tener una lista de bloques, libre o reservados, en la que en cada campo de la lista se indica el tama\~no del bloque, d\'onde empieza el bloque en memoria, y si est\'a libre u ocupado. En este caso es f\'acil asignar memoria ya que si se hace al principio o al final de un bloque (es lo m\'as com\'un) s\'olo hay que dividir una entrada de la lista en dos, la parte que ocupamos y la parte que queda libre. Liberar memoria es un poco m\'as complicado pero no tanto, s\'olo hay que tener en cuenta cuatro casos, que son las dos posibilidades para el bloque anterior (libre u ocupado) y las mismas dos posibilidades para el bloque siguiente. En caso de que el bloque anterior y/o el siguiente est\'en libres, entonces hay que mergear dos o tres entradas de la lista en una sola entrada correspondiente a un bloque libre.
 
+\subsection{Segmentaci\'on}
+
+% Tenemos dos cuestiones que necesitamos que esten cubiertas: protecci\'on y reubicaci\'on. La primera queda solucionada utilizando una tabla de p\'aginas para cada proceso, para que cada proceso pueda acceder s\'olo a sus p\'aginas.
+% 
+% Una soluci\'on que existe para estos dos problemas es la segmentaci\'on. Un segmento es un espacio de memoria de tama\~no variable, que es direccionado mediante un registro que hace referencia al principio del segmento.
+% 
+% A diferencia de paginaci\'on, donde las p\'aginas son invisibles para el programador, los segmentos son visibles y el programa debe especificar a qu\'e segmento hace referencia cuando quiere acceder a memoria.
+% 
+% Todav\'ia tenemos con segmentaci\'on el problema de la fragmentaci\'on y el swapping. Por eso se suelen combinar la paginaci\'on con la segmentaci\'on.
+
+La segmentación asigna bloques de tamaño fijo a un programa y con un proposito especifico. La memoria física del usuario se divide en segmentos, por ejemplo un segmento de código, otro de heap, otro de stack, etc. La información de cada uno de los segmentos es guardada en una segment table, en donde cada entrada corresponde a un segmento, y guarda la base,  el limite del mismo y los permisos.
+
+En este modelo la dirección virtual tiene dos partes: ``segmento : offset''. Para resolver la dirección virtual buscamos la entrada de la tabla asociada al segmento requerido y hacemos ``base + offset''.
+
+Intel implementa segmentaci\'on en sus procesadores Pentium con una GDT (Global Descriptor Table) global y una LDT (Local Descriptor Table) para cada proceso. Los registros CS (code segment) y DS (data segment) se denominan selector de segmento y son registros de 16 bits que apuntan a una entrada de la GDT o de la LDT (13 bits para la entrada en la tabla, 1 para indicar a en qu\'e tabla est\'a el descriptor de segmento y 2 para permisos). Una vez cargado el descriptor del segmento, que nos dice donde empieza y cu\'anto mide el segmento, se obtiene por un registro mediante el cual se direcciona, el offset en el segmento y, chequeando previamente que el offset sea v\'alido, se convierte la direcci\'on l\'ogica en direcci\'on lineal.
+
 \subsection{Paginaci\'on}
 
 La paginaci\'on consiste en dividir la memoria virtual (o l\'ogica) en bloques de un tama\~no fijo (generalmente 4KB) llamados p\'aginas, y la memoria f\'isica en bloques del mismo tama\~no llamados \textbf{frames}. La MMU es la que se encarga de asignar p\'aginas a frames, y las direcciones l\'ogicas est\'an compuestas por una parte que representa el n\'umero de p\'agina, y otra parte que representa el offset dentro de la p\'agina. Es por esto que las p\'aginas siempre deben medir una cantidad de bytes que sean potencias de dos, para poder dividir la direcci\'on en bits de n\'umero de p\'agina y bits de offset.
@@ -959,15 +975,15 @@ Para saber si una p\'agina est\'a en memoria y en qu\'e frame se encuentra, la M
 Se suele dividir las tablas en dos niveles: un directorio de tablas de p\'aginas que apunta a tablas de p\'aginas, a su vez cada una de estas tablas de paginas tendran en sus entradas las paginas que seran utilizadas por el programa. As\'i, si un proceso usa menos de 4MB de memoria, y las p\'aginas ocupan 4KB, entonces podemos tener un directorio de tablas de p\'aginas con 1024 entradas, una de ellas apuntando a una tabla de p\'aginas con 1024 entradas, y podemos direccionar los 4MB (1024 p\'aginas de 4KB) con tan solo 8KB (4KB del directorio de tablas y 4KB de la \'unica tabla).
 
 \subsubsection{TLB}
-Una de las desventajas de paginaci\'on es que, al tener que convertir las direcciones virtuales en f\'isicas, direccionar una p\'agina puede ser un poco lento, ya que requiere ir a buscar la p\'agina a la tabla de p\'aginas, lo que implica un direccionamiento a memoria, y despu\'es buscar la p\'agina en el frame que corresponda, es decir, otro direccionamiento a memoria. El necesitar de dos direccionamientos a memoria (o tres en el caso de dos niveles de tablas) hace que obtener instrucciones o datos de la memoria sea m\'as lento. La soluci\'on que se encontr\'o a este problema es una peque\~na cach\'e que se denomina \textbf{Translation Lookaside Buffer (TLB)}. La TLB, tambi\'en conocida como memoria asociativa, contiene el frame en el que se encuentran las p\'aginas m\'as usadas. Al buscar una p\'agina en memoria, lo primero que se hace es buscarla en el TLB, y en caso de que se encuentre presente en el mismo, el acceso a la p\'agina es mucho m\'as r\'apido.
+Una de las desventajas de paginaci\'on es que, al tener que convertir las direcciones virtuales en f\'isicas, direccionar una p\'agina puede ser lento, ya que requiere 3 direccionamientos a memoria (directorio, tabla, pagina). Esto en consecuencia hace que obtener instrucciones o datos de la memoria sea m\'as lento. La soluci\'on que se encontr\'o a este problema es una peque\~na cach\'e que se denomina \textbf{Translation Lookaside Buffer (TLB)}. La TLB, tambi\'en conocida como memoria asociativa, contiene el frame en el que se encuentran las p\'aginas m\'as usadas. Al buscar una p\'agina en memoria, lo primero que se hace es buscarla en el TLB, y en caso de que se encuentre presente en el mismo, el acceso a la p\'agina es mucho m\'as r\'apido.
 
-\subsection{Reemplazo de p\'aginas (swapping)}
+\subsection{Reemplazo de p\'aginas (demand paging)}
 
-Si implementamos paginaci\'on, nos ahorramos el problema de decidir en qu\'e bloque de memoria libre cargar una p\'agina, ya que todos los bloques son frames del mismo tama\~no (el tama\~no de las p\'aginas), pero en caso de que no haya suficiente memoria libre, debemos decidir de alguna manera qu\'e p\'aginas desalojar de memoria.
+Como con paginación todos los bloques son frames del mismo tamaño (el tamaño de las páginas), el problema de decidir en qué bloque de memoria libre cargar una página desaparece. En el caso de que no haya suficiente memoria libre, deberemos utilizar algún algoritmo que decida qué páginas desalojar de memoria. Para todos estos algoritmos existen dos versiones, una donde se desalojan las p\'aginas del mismo proceso (reemplazo local), y otra donde se puede desalojar cualquier p\'agina de memoria (reemplazo global).
 
-Veremos a continuaci\'on algunos algoritmos de reemplazo de p\'aginas. Para todos estos algoritmos existen dos versiones, una donde se desalojan las p\'aginas del mismo proceso, y otro donde se puede desalojar cualquier p\'agina de memoria.
+Algunos de estos algoritmos pueden ser utilizados como medidas para evitar \textbf{trashing}, es decir, la situación en donde el SO ocupa mas tiempo swapeando páginas que la CPU ejecutando procesos. Esto puede darse cuando la memoria esta llena y hay una alta contención entre los procesos al cargar sus paginas en memoria. Para atenuar los efectos del trashing pueden utilizarse algoritmos de reemplazo local, ya que estos algoritmos obligan al proceso a desalojar sus propias paginas. 
 
-Es importante utilizar un buen algoritmo de reemplazo de p\'aginas para evitar el \textbf{trashing} (la situaci\'on en la que se pierde mucho tiempo swapeando p\'aginas de memoria a disco).
+Estudiando mas de cerca los procesos, podremos darnos cuenta que en cada momento un proceso utiliza un determinado subconjunto de páginas de forma intensiva, llamado \textbf{working set}, hasta que en algun punto lo cambia practicamente en su totalidad. Este comportamiento suele repetirse a lo largo de la ejecucion del proceso. Es por esto que los algoritmos de reemplazo local son utiles para atenar los efectos del trashing.
 
 \subsubsection{Algoritmo \'Optimo}
 
@@ -1001,20 +1017,6 @@ Es muy parecido a Second Chance, pero en vez de guardar una cola, guarda una lis
 \subsubsection{Least Recently Used}
 
 El algoritmo Least Recently Used desaloja siempre la p\'agina que fue usada hace m\'as tiempo. En vez de guardar el momento en el que fue cargada en memoria, como en FIFO, guarda el momento en el que fue referenciada por \'ultima vez.
-
-\subsection{Segmentaci\'on}
-
-Tenemos dos cuestiones que necesitamos que esten cubiertas: protecci\'on y reubicaci\'on. La primera queda solucionada utilizando una tabla de p\'aginas para cada proceso, para que cada proceso pueda acceder s\'olo a sus p\'aginas.
-
-Una soluci\'on que existe para estos dos problemas es la segmentaci\'on. Un segmento es un espacio de memoria de tama\~no variable, que es direccionado mediante un registro que hace referencia al principio del segmento.
-
-A diferencia de paginaci\'on, donde las p\'aginas son invisibles para el programador, los segmentos son visibles y el programa debe especificar a qu\'e segmento hace referencia cuando quiere acceder a memoria.
-
-Todav\'ia tenemos con segmentaci\'on el problema de la fragmentaci\'on y el swapping. Por eso se suelen combinar la paginaci\'on con la segmentaci\'on.
-
-Intel implementa segmentaci\'on en sus procesadores Pentium con una GDT (Global Descriptor Table) global y una LDT (Local Descriptor Table) para cada proceso. Los registros CS (code segment) y DS (data segment) se denominan selector de segmento y son registros de 16 bits que apuntan a una entrada de la GDT o de la LDT (13 bits para la entrada en la tabla, 1 para indicar a en qu\'e tabla est\'a el descriptor de segmento y 2 para permisos). Una vez cargado el descriptor del segmento, que nos dice donde empieza y cu\'anto mide el segmento, se obtiene por un registro mediante el cual se direcciona, el offset en el segmento y, chequeando previamente que el offset sea v\'alido, se convierte la direcci\'on l\'ogica en direcci\'on lineal (la que luego pasa por paginaci\'on).
-
-A diferencia de las p\'aginas los segmentos pueden solaparse, por ejemplo, cuando hay memoria compartida.
 
 \subsection{Copy on Write}
 
