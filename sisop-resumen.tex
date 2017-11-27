@@ -1056,13 +1056,17 @@ Cuando el sistema operativo decide copiar la memoria al momento en el que uno de
 
 \section{Protección y seguridad}
 
+En ciertos ambientes académicos los dos términos pueden llegar a tener un significado distinto, sus definiciones formales están dadas por:
+
 La protección se trata de mecanismos para asegurarse de que nadie pueda acceder a los datos del otro (por ejemplo, que un proceso no pueda acceder fuera de su espacio de memoria. También se trata de tener un sistema de autorización que nos permita controlar qué usuario puede hacer cada cosa (por ejemplo, que un proceso no pueda ejecutar cierta parte de la memoria, si no tiene permiso).
 
 La seguridad se trata de asegurarse que quien dice ser cierto usuario, lo sea (por ejemplo, autenticar un usuario en un SO). También se trata de impedir la destrucción o adulteración de los datos.
 
+Sin embargo, en la cátedra no se tendrá en cuenta esta distinción.
+
 \subsection{Seguridad de la información}
 
-En seguridad de la información intentaremos preservar la confidencialidad, integridad y disponibilidad de datos. Para el estudio de estas propiedades es util tener ciertas abstracciones. Un sistema de seguridad suele tener sujetos, acciones y objetos. La idea es responder: ¿Qué sujetos pueden realizar qué acciones sobre qué objetos?
+En seguridad de la información intentaremos preservar la confidencialidad, integridad y disponibilidad de datos. Para el estudio de estas propiedades es útil tener ciertas abstracciones. Un sistema de seguridad suele tener sujetos, acciones y objetos. La idea es responder: ¿Qué sujetos pueden realizar qué acciones sobre qué objetos?
 
 Como los sujetos, o usuarios, por lo general pertenecen a un grupo (usuarios comunes, administradores, etc), se suelen agrupar en grupos o tener roles. Estos grupos o roles son sujetos del sistema de permisos que nos permite definir la forma de actuar de ciertos sujetos ante ciertos objetos.
 
@@ -1084,11 +1088,11 @@ Son funciones no inversibles que convierten una cadena de caracteres en otra, es
 
 Estas funciones tienen ser resistente a colisiones, es decir que sea difícil encontrar dos elementos distintos cuyo hash sea el mismo (colisión). Porque, por ejemplo, si al autenticarme se verifica el hash de mi contraseña, no quiero que haya otra contraseña distinto cuyo hash sea el mismo.
 
-Las funciones de hash son útiles para almacenar contraseñas, ya que las mismas conviene  guardarlas de modo tal que no se puedan leer, pero estas funciones nos permiten de todas formas comparar una contraseña ingresada con el original almacenado, utilizando la misma funcion de hash para la contraseña entrante y comparando el resultado. Para asegurar un mayor nivel de seguridad debe usarse salt e iterar la función de hash varias veces. 
+Las funciones de hash son útiles para almacenar contraseñas, ya que las mismas conviene  guardarlas de modo tal que no se puedan leer, pero estas funciones nos permiten de todas formas comparar una contraseña ingresada con el original almacenado, utilizando la misma función de hash para la contraseña entrante y comparando el resultado. Para asegurar un mayor nivel de seguridad debe usarse salt e iterar la función de hash varias veces. 
 
 Un \textbf{salt} no es mas que una cadena de caracteres que se le agrega a la contraseña para, que en el caso que se quiera ejecutar un ataque de fuerza bruta sobre el hash, no se obtenga la contraseña original. 
 
-Para implementar salt, para cada password p se toma una cadena al azar s (llamada salt). El hash que se almacena es $h(s.p)$ (el de $s$ concatenada con $p$). Como $s$ es aleatorio, $h(s.p)$ es un hash raro que seguro no está en la lista del atacante. No es necesario que la cadena de salt sea secreta, por lo que puede ser almacenada junto con $h(s.p)$. La necesitamos para verificar las contraseñas enviadas por los usuarios. Notar que aún teniendo el $s$ de cada $p$, un atacante no puedeejecutar su ataque tan fácilmente. Ahora, para descifrar una password $p$, tiene que concatenar su salt $s$ a cada password típica $p'$ y verificar si $h(s.p') = h(s.p)$.
+Para implementar salt, para cada password p se toma una cadena al azar s (llamada salt). El hash que se almacena es $h(s.p)$ (el de $s$ concatenada con $p$). Como $s$ es aleatorio, $h(s.p)$ es un hash raro que seguro no está en la lista del atacante. No es necesario que la cadena de salt sea secreta, por lo que puede ser almacenada junto con $h(s.p)$. La necesitamos para verificar las contraseñas enviadas por los usuarios. Notar que aún teniendo el $s$ de cada $p$, un atacante no puede ejecutar su ataque tan fácilmente. Ahora, para descifrar una password $p$, tiene que concatenar su salt $s$ a cada password típica $p'$ y verificar si $h(s.p') = h(s.p)$.
 
 Un \textbf{ataque a una función de hash} consiste en probar a lo bruto preimágenes. Si a una password le pasamos $10000$ veces una función de hash (i.e. $h^{10000}(p)$), ahora el atacante para cada prueba tiene que hashear $10000$ veces, lo cual hace que el ataque sea $10000$ veces más lento.
 
@@ -1100,9 +1104,21 @@ Los algoritmos de encriptación simétricos son aquellos que utilizan la misma c
 
 Los algoritmos de encriptación asimétricos usan claves distintas. Una de ellas es pública, que puede conocer todo el mundo, y la otra es privada, que sólo conoce el receptor de un mensaje. Por ejemplo: RSA.
 
-\textbf{RSA} es el método de encriptación asimétrica más popular. Produce una clave pública, que puedo publicar, y una privada, que debo mantener secreta: $D(E(m, publica), privada) = m$, $D(E(m, privada), publica) = m$. Para que alguien me mande un mensaje, lo encripta usando mi clave pública y me lo manda. Solo yo lo puedo leer porque la única forma dedesencriptarlo es con mi clave privada. La seguridad de este método se basa en la dificultad para factorizar enteros grandes.
+\textbf{RSA} es el método de encriptación asimétrica más popular. Produce una clave pública, que puede publicarse, y una privada, que debe mantenerse secreta: $D(E(m, publica), privada) = m$, $D(E(m, privada), publica) = m$. Para mandar un mensaje a una entidad especifica y asegurarse que solo la misma pueda leerlo, se lo encripta usando la clave pública y se manda, la única forma de desencriptarlo luego es utilizando la clave privada. La seguridad de este método se basa en la dificultad para factorizar enteros grandes. El método RSA funciona, a grandes rasgos, de la siguiente manera:
 
-Por otro lado, tendremos la \textbf{firma digital con RSA} que se utiliza para asegurarme que un documento es auténtico (que nadie lo cambió). Para obtener una firma digital se calcula el hash del documento que estoy firmando, y se encripta este hash con mi clave privada.La firma digital se agrega al documento original. El receptor lo desencripta con mi clave pública (está confiando que la clave pública es efectivamente la mía), y si lo puede desencriptar exitosamente, entonces el dueño de la clave pública es efectivamente el autor del documento. Luego, verifica que el hash obtenido de la desencripción se corresponda con el del documento para asegurarse que no se haya alterado.
+\begin{itemize}
+\item Tomemos $p$ y $q$ primos (de 200 dígitos aproximadamente).
+\item Multipliquémoslos: $n = pq$.
+\item Calculemos también: $n_0 = (p - 1)(q - 1)$.
+\item Elijamos un entero e que esté entre $2$ y $n' - 1$ y que sea coprimo (no tener factores comunes) con $n'$.
+\item $e$ y $n$ van a ser nuestra clave de encriptación (pública).
+\item Computamos d para que cumpla que el resto de $d.e/_0 = 1$.
+\item d y n van a ser nuestra clave de desencriptación (privada).
+\item \textbf{¿Cómo encripto?} Para cada letra m calculo el resto de dividir $m^e$ por $n$.
+\item \textbf{¿Cómo desencripto?} Para cada letra encriptada $c$ calculo el resto de dividir $c^d$ por $n$.
+\end{itemize}
+
+Por otro lado, tendremos la \textbf{firma digital con RSA} que se utiliza para asegurarme que un documento es auténtico (que nadie lo cambió). Para obtener una firma digital se calcula el hash del documento que se esta firmando, y se encripta este hash con la clave privada de la entidad que lo firma, luego la firma digital se agrega al documento original. El receptor lo desencripta con la clave pública de la entidad (confiando que la clave pública es efectivamente esa), y si lo puede desencriptar exitosamente, entonces el dueño de la clave pública es efectivamente el autor del documento. Luego, verifica que el hash obtenido de la desencripción se corresponda con el del documento para asegurarse que no se haya alterado.
 
 \subsubsection{Autenticación remota con hash}
 
@@ -1120,6 +1136,87 @@ Si bien este procedimiento nos brinda cierta seguridad sobre la identidad del cl
  \item C hace lo que S le pide y le manda el resultado.
  \item Ahora a M no le sirve de nada interceptar ese resultado y enviárselo a S para hacerse pasar por C, porque cuando M se comunique con S, S le va a mandar otra semilla.
 \end{itemize}
+
+\subsection{Autorización}
+
+\subsubsection{Monitor de Referencias}
+
+El monitor de referencias es el mecanismo responsable de mediar cuando los sujetos intentan realizar operaciones sobre los objetos, se basa en una política de acceso.
+
+La forma más sencilla de concebir a la autorización es como una matriz de control de accesos. La matriz esta compuesta por el producto cartesiano de Sujetos x Objetos, en las celdas figuran las acciones permitidas. Se puede almacenar como una matriz centralizada, o separada por filas o por columnas. Por ejemplo, los archivos suelen guardar sólo lo que puede hacer cada usuario con ellos (es decir, la columna asociada a ese archivo).
+
+Este tipo de representación esta basado en el principio del mínimo privilegio, es decir a cada sujeto sólo permitirle hacer lo mínimo que necesite para funcionar, infiriendo que todo lo que no esta dicho no se puede hacer. Cuando se crea un nuevo objeto se le definen permisos por defecto, que están dados por el tipo de objeto. La matriz también puede ser de Sujetos x (Objetos + Sujetos), puesto que los sujetos también pueden tener permisos sobre cómo actuar sobre otros sujetos.
+
+\subsubsection{DAC y MAC}
+
+El DAC (\textbf{Discretionary Access Control}), es otro esquema de permisos (ACL). La idea bajo este esquema es que los atributos de seguridad se tienen que definir explicitamente por el dueño. Otro esquema posible es \textbf{Mandatory Access Control}, que es utilizado para manejar información altamente sensible. Cada sujeto tiene un grado y los objetos creados heredan el drago del último sujeto que los modificó. La idea es que un sujeto sólo puede acceder a objetos de grado menor o igual que el de él. Un ejemplo de este esquema es Windows Integrity Control, el mismo se basa en el modelo Biba de control de integridad. El mismo define 4 niveles de integridad: System, High, Medium, Low. Los archivos, carpetas, usuarios, procesos, todos tienen niveles de integridad, y el nivel medio es el nivel por defecto para usuarios estándar y objetos sin etiquetas. Un usuario no puede darle a un objeto un nivel de integridad más alto que el suyo.
+
+\subsubsection{DAC en Linux}
+
+El Linux se utiliza DAC, cada archivo tiene un 3 categorías de permisos aplicadas a distintos grupos de sujetos: dueño, grupo y otros. En cada categoría se pueden definir permisos particulares para un grupo de escritura, lectura y ejecución (r, w, x). También tendremos SETUID y SETGID que son permisos de acceso especiales que pueden asignarse a archivos o directorios para permitir a usuarios del sistema ejecutar binarios con privilegios elevados, se denota con s. Se pueden activar estos bits utilizando chmod u<+/->s <archivo> y chmod g<+/->s <archivo>. Todos los usuarios contaran con un id y podrán pertenecer a varios grupos de usuarios, los grupos también contaran con ids.
+
+A veces queremos ejecutar un proceso con mayores privilegios. Por ejemplo para cambiar la contraseña de mi usuario. Queremos ejecutar con los privilegios de root, es decir, del owner del programa. Notar que esta no es una forma de transformar al usuario en root (esto sería un obvio problema de seguridad), sino que sólo estoy ejecutando un programa de root, como root. En definitiva, un proceso tiene dos tipos de uid: el uid del usuario que ejecuta un proceso (uid real) y uid del owner del archivo (uid efectivo). Análogamente para los grupos existe gid real y gid efectivo.
+
+\subsection{Ataques comunes}
+
+
+En la siguiente sección hablaremos de ataques comunes realizados a protocolos de seguridad.
+
+\subsubsection{Buffer overflow}
+
+
+Se podría generar overflow en un buffer en stack de una función para cambiar sectores prohibidos de la memoria. Típicamente se usa para cambiar el IP (instruction pointer), que está escrito en la base del stack, también se puede hacer con el heap, llenándolo hasta pisar el IP. La idea es apuntar el IP a una dirección que hayamos llenado del stack con un programa malicioso, de forma tal que al hacer un return el sistema comience a correr esa porción del código utilizando los permisos del programa que estaba corriendo antes
+
+Para evitarlo se pueden hacer chequeos de límites en los accesos a las estructuras de datos (esto es lo que hacen, por ejemplo, Java o C\#), o chequear que no se esté accediendo a sectores prohibidos del stack.
+
+\subsubsection{Control de parámetros}
+
+La idea es pasar un parámetro a un programa, que al ser utilizado genere resultados
+inesperados. El caso típico es SQL injection. Hay dos posibles soluciones a este ataque, la primera es utilizar el mínimo privilegio posible y la segunda es validar los parametros. En la practica ambas se utilizan en conjunto.
+
+
+\subsubsection{Condiciones de carrera}
+
+
+Una condición de carrera, la cual esta definida como un comportamiento anómalo debido a una dependecia critica inesperada en la temporización de los eventos, puede producir problemas de seguridad. Por ejemplo, una operación que cree un archivo si no existe, puede terminar sobrescribiendo un archivo si las operaciones con las cual se realiza son divisibles.
+
+\subsubsection{Codigo malicioso}
+
+O malware, es software diseñado para llevar a cabo acciones no deseadas y sin el consentimiento explícito del usuario. Algunos tipos de malware pueden incluir:
+\begin{itemize}
+\item Troyano: es un software que contiene un segmento de código que se aprovecha de su entorno para realizar una acción maliciosa. En otras palabras, malware disfrazado de un programa con otras intenciones.
+\item Trap door o backdoor: agujero dejado en un programa a propósito por su creador. Por ejemplo, para que cierto usuario pueda loguearse en un sistema con privilegios máximos.
+\item Virus: código embebido en un programa legítimo, que es capaz de replicarse a sí mismo, y que están diseñados para infectar otros programas (modificando o destruyendo archivos).
+\item Keylogger: guarda todo lo que se teclea y puede mandarlo via internet a una direccion remota indicada.
+\end{itemize}
+
+Las principales vías de infección incluyen: descargas desde páginas web (a veces involuntariamente), adjuntos por email, vulnerabilidades en software, compartir dispositivos de almacenamiento, otros protocolos y aplicaciones de Internet: chat, P2P, redes sociales, etc. Las formas de prevenir estas infecciones es la utilización de antivirus actualizado, recibir las actualizaciones de seguridad debidas para el sistema operativo utilizado, y el uso del sentido común. Sin embargo, aun así en grandes organizaciones siempre hay personas que van a terminar cayendo en estos ataques, y dada la complejidad de una organización, un eslabón pone en peligro la totalidad de la misma. Por eso los administradores de sistemas requieren a soluciones como generadores de claves físicas (o llaves usb) que en conjunto con la contraseña son requeridas para acceder a una cuenta corporativa. Estas claves son la solución definitiva contra ataques de phishing, ya que requieren que la persona inserte físicamente la misma para acceder a una cuenta.
+
+Otras políticas de prevención consisten en denegar la instalación de programas no aprobados por los administradores, sistemas de firewall que deniegan el acceso a sitios previamente aprobados, políticas de acceso a la red interna del trabajo y encriptación de las entradas externas (utilizando VPNs) y registro de las operaciones de cada usuario a recursos compartidos, con tal de poder un análisis pertinente si algo ocurre.
+
+Dentro de desarrollo muchas veces se suele utilizar sandboxing, que es básicamente un mecanismo que provee el SO para aislar procesos, en el caso de linux provee chroot. También suele utilizarse virtualización para tener un sistema totalmente aislado pero con la misma funcionalidad que un sistema operativo completo, en donde se pueden probar diferente tipo de cosas sin riesgo alguno.
+
+\subsubsection{Ataques externos}
+
+Estos ataques están pensados para debilitar las estructuras internas de un sistema y no para tomar control del mismo. Un ejemplo es un ataque DoS (Denial of Service), el mismo consiste en la sobrecarga del ancho de banda de la víctima o de sus recursos computacionales, de forma tal de denegar el acceso a usuarios legítimos. En particular el ataque de acnho de banda es muy difícil de contrarrestar ya que, si es bien ejecutado, no puede ser contrarrestado con software, si no que la forma de contrarrestarlo reside totalmente en la totalidad de ancho de banda que tengamos disponible. Normalmente si poseemos un servicio de hosting para una aplicación, es solucionado por el datacenter que nos provee dicho servicio, mitigando el ataque desde su lado.
+
+
+Por otro lado un privilege escalation es el aprovechamiento de un bug en un sistema para ganar acceso a recursos que usualmente no son accesibles como usuario.
+
+\subsection{Principios de un sistema seguro}
+
+Los principios generales para un sistema seguro son:
+\begin{itemize}
+\item Mínimo privilegio.
+\item Simplicidad.
+\item Validar todos los accesos a los datos.
+\item Separación de privilegios.
+\item Minimizar la cantidad de mecanismos compartidos.
+\item Seguridad multicapa.
+\item Facilidad de uso de las medidas de seguridad.
+\end{itemize}
+
+En general, cualquier política, mecanismo o procedimiento de seguridad está basado en asumir ciertos hechos. Hay que tener claros cuáles son estos hechos, los cuales normalmente residen en el rol de la confianza. Por ejemplo al bajarnos un parche para solucionar un problema de seguridad del SO confiamos en que el autor del parche es realmente el vendedor del SO y el objetivo del parche realmente es solucionar el problema, y no otro. A veces esto no se cumple y la confianza que los usuarios brindamos a los distribuidores no es respetada. Por eso es que siempre es importante tener en mente que en casos críticos todo esto necesita ser validado.
 
 \section{Sistemas distribuidos}
 
