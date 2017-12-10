@@ -1218,64 +1218,69 @@ Los principios generales para un sistema seguro son:
 
 En general, cualquier política, mecanismo o procedimiento de seguridad está basado en asumir ciertos hechos. Hay que tener claros cuáles son estos hechos, los cuales normalmente residen en el rol de la confianza. Por ejemplo al bajarnos un parche para solucionar un problema de seguridad del SO confiamos en que el autor del parche es realmente el vendedor del SO y el objetivo del parche realmente es solucionar el problema, y no otro. A veces esto no se cumple y la confianza que los usuarios brindamos a los distribuidores no es respetada. Por eso es que siempre es importante tener en mente que en casos críticos todo esto necesita ser validado.
 
-\section{Sistemas distribuidos}
-
-\subsection{¿Qu\'e son los sistemas distribuidos?}
+\section{Sistemas Distribuidos}
 
 Existen tres conceptos que son similares pero no iguales:
 
 \begin{itemize}
-\item C\'omputo simult\'aneo: Un scheduler asigna un quantum a cada proceso. Los procesos se ejecutan simult\'aneamente.
-\item C\'omputo paralelo: M\'as de una CPU en una misma m\'aquina.
-\item C\'omputo distribuido: Varios procesadores que no comparten memoria, clock, etc.
+\item C\'omputo simult\'aneo (o concurrente): Un scheduler asigna un quantum a cada proceso. Los procesos se ejecutan en una misma CPU de forma concurrente.
+\item C\'omputo paralelo: M\'as de una CPU en una misma m\'aquina ejecutando procesos al mismo tiempo. Se suelen compartir el scheduler, clock y memoria en estos tipos de sistemas.
+\item C\'omputo distribuido: Varias CPUs ejecutando procesos al mismo tiempo en distintas maquinas, que no comparten fisicamente memoria, clock, etc. Sin embargo en algunos casos la memoria puede ser compartida mediante el modelo de comunacion Linda y el scheduler y clock mediante TTA (Time Triggered Architecture).
 \end{itemize}
 
-Hay cuatro razones importantes por las que los sistemas distribuidos pueden ser una buena opci\'on:
+Las ventajas de tener sistemas distribuidos van desde aprovechar el uso de procesadores en maquinas distintas con el fin de reducir el tiempo de procesamiento; la tolerancia a fallas por la posibilidad de tener replicacion de datos entre maquinas, hasta a veces, en distintas ubicaciones geograficas; y la escalabilidad del sistema, que permite automaticamente contar con mayor cantidad de espacio y poder de computo agregando mas maquinas. Sin embargo, entre las desventajas podremos encontrar la necesidad de lidiar con sincronizacion de procesos, la consistencia de datos y la informacion parcial.
 
+Cuando creamos un sistema distribuido existen limitaciones reales que no permiten gozar de todas las ventajas al mismo tiempo. La Conjetura de Brewer (CAP) examina esta problematica en mas detalle, y nos dice que en un sistema distribuido solo podremos tener dos de tres caracteristicas:
 \begin{itemize}
-\item Compartir recursos: A veces es muy \'util poder compartir los recursos entre varias m\'aquinas (desde archivos en un disco hasta una impresora).
-\item Velocidad de c\'omputo: En sistemas distribuidos podemos aprovechar el uso de procesadores en m\'aquinas distintas para mejorar la velocidad de c\'omputo.
-\item Confiabilidad: Un sistema distribuido puede soportar la falla de una de sus m\'aquinas permitiendo que otras m\'aquinas se ocupen de las tareas de las que estaba encargada la m\'aquina que fall\'o.
-\item Comunicaci\'on: La comunicaci\'on entre procesos en distintas m\'aquinas de un sistema distribuido puede ser muy \'util.
+\item Consistencia: todos los nodos ven la misma información al mismo tiempo.
+\item Disponibilidad: cada petición a un nodo recibe una respuesta.
+\item Tolerancia a partición: sigue funcionando aún si la red falla parcialmente.
 \end{itemize}
 
-La taxonom\'ia de Flynn divide a los sistemas en SISD, SIMD, MISD, MIMD (Single/Multiple Instruction Single/Multiple Data).
+\subsection{Información parcial}
+Una máquina no puede saber todo lo que sucede en el sistema, por lo que se suele dividir el trabajo aplicando paralelismo de datos o paralelismo de tareas. En el paralelismo de datos se aplica el mismo proceso a diferentes datos, por ejemplo paralelizar una multipliacion matricial, mientras que en el paralelismo de tareas se paralelizan distintas tareas, por ejemplo procesando los frames de un video para transmitirlo de forma eficiente via streaming.
 
-Los sistemas distribuidos comparten el scheduler y un canal de comunicaciones, pero no la memoria ni el clock.
+\subsection{Comunicacion y Sincronizacion}
+Cuando se tiene un sistema distribuido surge la necesidad de sincronizar varias de sus partes, sea bien para realizar un trabajo en conjunto o para comunicar distintas partes de informacion entre los distintos componentes de un sistema.
 
-Es importante la manera en la que los procesos se comunican entre s\'i en un sistema distribuido. La forma en la que se estructuran los procesos para que cooperen entre s\'i se llama arquitectura de software. El qu\'e comparten y qu\'e no (memoria, scheduler, clock, etc) se llama arquitectura de hardware.
+\subsubsection{Memoria}
 
-\subsection{Arquitecturas de Hardware}
+Normalmente en los sistemas paralelos se utiliza la memoria para realizar sincronizacion entre procesos. A nivel hardware uno de los modelos mas utilizados es llamado UMA (Uniform Memory Access), el cual centraliza el acceso a memoria desde cada uno de los procesadores por medio de una red de interconexion, esto genera que el acceso a memoria sea igual para cualquier procesador. UMA es normalmente utilizado en cualquier computadora regular con el fin de dar acceso a los distintos CPUs a la memoria RAM. 
 
-Existen varias arquitecturas de hardware, a continuaci\'on analizaremos algunas de ellas.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{imgs/numa_uma.png}
+    \caption{Modelos UMA y NUMA de memoria.}
+    \label{fig:numa_uma}
+\end{figure}
 
-\begin{itemize}
-\item Symetric Multi Processing (SMP): consiste en varios procesadores compartiendo la memoria. Los procesadores suelen ser iguales.
-\item Multicore: M\'as de un procesador, compartiendo cach\'e L2.
-\item NUMA: Cada procesador tiene su memoria local, aunque puede, de manera m\'as lenta, acceder a la memoria de los otros procesadores.
-\item Redes: Es el nombre que se le suele dar cuando son un conjunto de computadoras independientes. Hasta hace un tiempo se utilizaba el t\'ermino NOW (Network of Workstations).
-\item Clusters: Un conjunto de computadoras conectadas por una red de alta velocidad que comparten el scheduler.
-\end{itemize}
+Otro modelo utilizado es llamado NUMA (Non-Uniform Memory Access), en donde cada procesador tiene asignada una memoria particular, que puede ser accedida en forma paralela por cada procesador, y una red de interconexion que conecta a los distintos pares de CPU para permitir sincronizacion y consistencia. Este modelo genera que haya areas mas rapidas de acceder que otras para un procesador dado. El mismo es normalmente utilizado con el L1 cache que cada CPU trae asignado, pero tambien puede ser visto en sistemas distribuidos, si consideramos a cada ``CPU'' como una computadora entera.
 
-Un grid es un conjunto de clusters, cada uno bajo un dominio administrativo distinto, generalmente alejados geogr\'aficamente.
+Por otro lado a nivel software tendremos modelos asociativos estructurados (dado un valor, indican la posicion) y no estructurados, como la memoria virtual global.
 
-Cloud computing es el t\'ermino que se utiliza para clusters donde uno puede alquilar poder de c\'omputo.
+\subsubsection{Sincronica}
 
-\subsection{Arquitecturas de Software}
+Este tipo de comunicacion es utilizada por los sistemas de computo distribuidos, en donde muchas veces los modulos del sistema corren en maquinas fisicas distintas. Esto crea la necesidad de poseer protocolos de comunicacion, en este caso sincronica, para el envio de consultas y datos entre los distintos modulos. Dentro de RPC (Remote Procedure Call) sincronico tendremos ejemplos como Java Remote Method Invocation (RMI), JavaScript Object Notation (JSON-RPC) y Simple Object Access Protocol (SOAP), este ultimo construido sobre XML para el envio y recepcion de datos. Este tipo de RPCs luego de enviar una consulta esperan una respuesta en ese momento.
 
-Telnet es un protocolo (y un programa que utiliza el protocolo) para conectarse a un equipo remotamente. Con telnet los recursos necesarios para cierta parte del procesamiento est\'an en un equipo remoto. Telnet existe desde 1969.
+\subsubsection{Asincronica}
 
-RPC (Remote Procedure Call) es un mecanismo que permite hacer llamadas a subrutinas que se encuentran en otro equipo remotamente.
+Por otro lado tendremos RPCs asincronicos, en donde la respuesta no esta asegurada en el mismo momento en el que se envia la consulta y no se la maneja de dicha manera. Entre algunos de estos tendremos Promises, Futures y Windows Asynchronous RPC, todos estos modelos generan un objeto que tiene una ``promesa'' o la respuesta en un ``futuro'', que una vez obtenida la misma su procesamiento se termina. Son actualmente comunes en frameworks destinados a trabajar con JavaScript, por su modelo de comunicacion asincronica (AJAX).
 
-Tanto Telnet como RPC implican una m\'aquina activa que procesa y una m\'aquina pasiva que manda a procesar. Estas arquitecturas se suelen denominar cliente/servidor. El servidor es un componente que da servicios cuando el cliente se lo pide. El programa principal hace de cliente de los servicios que va necesitando para completar su tarea.
+Tambien existen los sistemas send/receive, que tambien son catalogados como asincronicos. Entre los mismos tendremos el mailbox, pipes no bloqueantes, MPI para C y C++ y Scala actors receive/react.
 
-La conjetura de Brewer dice que en un entorno distribuido s\'olo se pueden garantizar dos de las siguientes tres: consistencia, disponibilidead y tolerancia a fallos.
+\subsection{Sistema de archivos}
 
-\subsection{Locks en sistemas distribuidos}
+El sistema de archivos de un sistema distribuido debe poder operar de modo tal que la ubicación física de los archivos sea transparente. Este sistema es el responsable de varias de las ventajas de los sistemas distribuidos como la escalabilidad; que permite almacenar una enorme cantidad de datos, dividiéndolos sobre los discos de muchas máquinas; y la torelancia a fallas; que para asegurarla se suelen implementar replicación y migración. Algunos ejemplos son Hadoop Distributed File System (HDFS) y Red Hat Cluster Storage.
 
-En sistemas distribuidos no hay TestAndSet at\'omicos, entonces, ¿c\'omo implementamos los locks?. Una de las soluciones m\'as sencillas es designar un nodo para que se encargue de administrar los recursos, y crear procesos en ese nodo (proxies) que representen a los procesos remotos, teniendo que pedirle los procesos remotos a los proxies que negocien los recursos por ellos.
+\subsection{Scheduling}
 
-Este enfoque centralizado tiene varios problemas. Uno de ellos es el cuello de botella. Otro problema es que ante la falla del servidor se cae todo el sistema.
+En sistemas distribuidos que comparten procesos entre maquinas y poseen un sistema de scheduling distribuido el mismo se da en dos niveles: local y global. En el \textbf{scheduling local} se le otorga al procesador un proceso ready, esto pasa siempre, en cada round. En el \textbf{scheduling global} se le asigna un proceso a un procesador (mapping).
+
+Dentro del scheduling global se busca compartir la carga entre los distintos procesadores. Para hacerlo existen dos politicas: se puede realizar de manera \textbf{estatica}; en el momento de la creacion del proceso (affinity); o de forma \textbf{dinamica}, en donde la asignacion varia durante la ejecución, llamada tambien migracion (migration).
+
+A la vez la migración puede ser de dos tipos: \textbf{sender initiated} en donde la misma es iniciada por un procesador sobrecargado con el fin de reducir su load; o \textbf{receiver initiated} en donde es iniciada por un procesador libre con el fin de incrementar su load y aprovechar el poder de procesamiento disponible.
+
+En definitiva, la migración es una parte importante de la política de scheduling en sistemas paralelos, y abre otras preguntas: ¿Cuándo hay que migrar un proceso? ¿Qué proceso hay que migrar? ¿A dónde hay que migrarlo? ¿Cómo se difunde el estado?.
 
 \end{document}
 
