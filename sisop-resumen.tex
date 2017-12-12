@@ -253,47 +253,49 @@ Esto puede ocurrir siempre que haya contenci\'on (varios procesos quieren accede
 
 \subsection{Secci\'on cr\'itica}
 
-A veces un proceso tiene que ejecutar un bloque de c\'odigo que implica escribir parte de la memoria compartida o escribir un archivo. Esta parte del c\'odigo en la que el proceso no puede ejecutarse en simult\'aneo con otra parte de otro proceso que escriba las mismas variables o archivos se la conoce como secci\'on cr\'itica.
-
-Cuando m\'as de un proceso tiene la secci\'on cr\'itica, s\'olo uno a la vez puede acceder a la misma al mismo tiempo. La soluci\'on al problema de la secci\'on cr\'itica tiene tres requerimientos:
+A veces un proceso tiene que ejecutar un bloque de c\'odigo que implica escribir parte de la memoria compartida o escribir un archivo. Esta parte del c\'odigo en la que el proceso no puede ejecutarse en simult\'aneo con otro proceso que escriba las mismas variables o archivos se la conoce como secci\'on cr\'itica. Solo un proceso a la vez puede estar ejecutando esta sección. Esta sección critica puede ser vista tambien como un recurso, ya que en otros casos no es una porcion de codigo si no un recurso del sistema el que quiere ser accedido. La soluci\'on total al problema de la secci\'on cr\'itica tiene tres requerimientos:
 
 \begin{itemize}
-\item Exclusión mutua (mutual exclusion): Por cada sección critica solo puede existir un proceso que este ejecutandose en la misma.
-\item Progreso (freedom from deadlock): La decisi\'on de qu\'e proceso entra en una secci\'on cr\'itica no puede ser postpuesta indefinidamente. Dicho de otra manera, cuando un proceso pide acceso a una sección critica, ese acceso debe ser otorgado en un periodo de tiempo acotado.
-\item Espera acotada (freedom from starvation): Existe un l\'imite de cu\'antas veces pueden entrar otros procesos a una sección cr\'itica antes de que un proceso que solicitó la entrada pueda hacerlo.
+\item Exclusión mutua (mutual exclusion / EXCL): Por cada recurso solo puede existir un proceso que este haciendo uso del mismo.
+\item Progreso (freedom from deadlock / LOCK-FREE / PROG): La decisi\'on de a qu\'e proceso se le asigna un recurso no puede ser postpuesta indefinidamente. Dicho de otra manera, cuando hay un conjunto de procesos en espera de un recurso, se le debe otorgar acceso a alguno de los procesos en un periodo de tiempo acotado. Es importante remarcar que esta propiedad no remarca a que proceso se le debe otorgar acceso.
+\item Progreso global absoluto o espera acotada (freedom from starvation / WAIT-FREE): En los casos en que tengamos muchos procesos queriendo acceder a un mismo recurso, la propiedad anterior no es suficiente ya que puede producir starvation. WAIT-FREE nos dice que existe un l\'imite de cu\'antas veces pueden obtener un recurso otros procesos antes de que un proceso que solicitó el recurso lo obtenga. Es importante remarcar que WAIT-FREE implica LOCK-FREE, ya que esta propiedad predica sobre lo mismo pero extendiendo su definición a cada uno de los procesos particulares.
 \end{itemize}
+
+
+
+Sin embargo, muchas veces.Adicionalmente, tambien se tienen en cuenta las siguientes propiedades:
+\begin{itemize}
+ \item Justicia (Fairness): las solicitudes de uso deben ser cumplidas en el orden en que fueron hechas.
+ \item Progreso global dependiente (G-PROG): si todo proceso que recibe el recurso lo libera eventualmente, entonces todo proceso que solicita el recurso lo recibe eventualmente. Esto puede no cumplirse en el caso en el que algun proceso falle dentro de la seccion critica. Si ningun proceso falla, entonces WAIT-FREE implica G-PROG.
+\end{itemize}
+
 
 \subsubsection{Soluci\'on de Peterson al problema de la secci\'on cr\'itica}
 
 Una posible soluci\'on al problema de la secci\'on cr\'itica cuando hay s\'olo dos procesos, es la soluci\'on de Peterson.
 
-Esta soluci\'on utiliza dos variables:
+Esta soluci\'on utiliza dos variables atomicas SWMR (esto lo veremos mas adelante): $turn$ va a ser un entero que indique a qu\'e proceso le toca correr su secci\'on cr\'itica y $flag$ nos indica si el proceso está listo para correr su secci\'on cr\'itica. La soluci\'on de Peterson para el proceso $i$ (que puede ser 0 o 1) es la siguiente:
 
 \begin{code}
-int turn;
-bool flag[2];
-\end{code}
+atomic_swmr int turn;
+atomic_swmr bool flag[2];
 
-$turn$ va a ser un entero que indique a qu\'e proceso le toca correr su secci\'on cr\'itica y flag es un flag que dice si el proceso est\'a listo para correr su secci\'on cr\'itica.
-
-La soluci\'on de Peterson para el proceso $i$ (0 o 1, $j = 1-i$) es la siguiente:
-
-\begin{code}
-do{
+P(i) {
     flag[i] = true;
-		turn = j;
-		while(flag[j] && turn == j);
-		//sección crítica
-		flag[i] = false;
-		//sección no crítica
-}while(true);
+    j = 1-i;
+    turn = j;
+    while(flag[j] && turn == j);
+    // sección crítica
+    flag[i] = false;
+    // sección no crítica
+}
 \end{code}
 
 Lo que hace este c\'odigo b\'asicamente es lo siguiente: Antes de entrar a la secci\'on cr\'itica un proceso avisa que quiere entrar seteando su flag en true, despu\'es le cede el turno al otro proceso, y si el otro proceso tiene su flag en true se queda esperando a que termine de correr su secci\'on cr\'itica. De esta manera podemos asegurar los tres requisitos de la soluci\'on de la secci\'on cr\'itica:
 
 \begin{itemize}
 \item Exclusi\'on mutua: No puede ser que dos procesos entren a la vez a la secci\'on cr\'itica. Si un proceso est\'a en su secci\'on cr\'itica tiene su flag en true, luego el otro proceso tiene que tener el turno para no entrar en el while, pero como el proceso $i$ est\'a en la secci\'on cr\'itica, cuando $j$ setea el turno en $i$ entra en el while hasta que $i$ libera el flag. Si los dos quisieran entrar a la vez, ambos flags estar\'ian prendidos y s\'olo uno de los dos procesos tendr\'ia su turno.
-\item Progreso: Uno de los dos procesos va a tener el turno en todo momento, luego si s\'olo uno quiere entrar a la secci\'on cr\'itica va a entrar porque el otro va a tener el flag apagado, y si los dos quieran entrar, el primero que le asigne el turno al otro, va a recuperar el turno cuando el otro proceso se lo asigne y va a entrar en la secci\'on cr\'itica, dejando al otro ciclar en el while.
+\item Progreso: Uno de los dos procesos va a tener el turno en todo momento. Si s\'olo uno quiere entrar a la secci\'on cr\'itica, el otro va a tener el flag apagado, por lo que podra hacerlo. Si los dos quieren entrar, el primero que le asigne el turno al otro accederá primero, ya que recupera el turno cuando el otro proceso cambia la variable de turno. El segundo proceso quedara ciclando en el while hasta que el flag cambie.
 \item Espera acotada: Una vez que el proceso entra en el while, cuando el otro proceso libera el flag, ya puede entrar a la secci\'on cr\'itica, a\'un si el otro proceso vuelve a pedir la secci\'on cr\'itica ya que en ese caso le va a ceder el turno.
 \end{itemize}
 
@@ -304,7 +306,7 @@ Otra soluci\'on al problema de la secci\'on cr\'itica requiere un poco de ayuda 
 La instrucci\'on TestAndSet debe hacer at\'omicamente (es decir, sin la posibilidad de ser interrumpida en el medio de la instrucci\'on) lo mismo que hace el siguiente c\'odigo
 
 \begin{code}
-bool TestAndSet(bool *var)
+atomic bool TestAndSet(bool *var)
 {
     bool res = *var;
 		*var = true;
@@ -319,7 +321,7 @@ bool lock // variable global compartida por todos los procesos
 while(true)
 {
     while(TestAndSet(&lock));
-		//sección crítica
+		// sección crítica
 		lock = false;
 		// sección no crítica
 }
@@ -327,7 +329,22 @@ while(true)
 
 Para evitar inanici\'on la variable $lock$ debe ser inicializada en false. Adem\'as, como TestAndSet es at\'omica, no puede haber condici\'on de carrera si se ejecutan dos TestAndSets en dos procesos separados ya que uno se ejecutar\'a primero y el otro despu\'es.
 
-En los casos de la soluci\'on de Peterson y de la implementaci\'on de locks con TestAndSet, estamos haciendo un while que cicla permanentemente hasta que le toca el turno al proceso de correr su secci\'on cr\'itica. Esto se llama \textbf{busy waiting} y es una \textbf{MUY MALA IDEA} ya que consumimos mucho tiempo de la CPU ejecutando el while cuando tranquilamente podr\'iamos poner un sleep en el cuerpo del while. Aunque tambi\'en debemos ser cuidadosos, si el sleep es por un tiempo muy grande podemos perder eficiencia, y si es por un tiempo muy chico tambi\'en estamos desperdiciando tiempo del procesador como en el caso de busy waiting.
+En los casos de la soluci\'on de Peterson y de la implementaci\'on de locks con TestAndSet, estamos haciendo un while que cicla permanentemente hasta que le toca el turno al proceso de correr su secci\'on cr\'itica. Esto se llama \textbf{busy waiting}, y en particular es llamado spin-wait sobre TAS. Este tipo de implementaciones tienen un overhead muy grande por la utilizacion de busy-waiting. Hay otras implementaciones que intentan suplir esto utilizando un sleep en el cuerpo del ciclo, pero puede provocar innanicion en ciertos casos y no es tan efectivo.
+
+Otra solucion llamada Test and Test-And-Set (TTAS) reduce el overhead de acceder y modificar la memoria de manera atomica, ya que esto ultimo es costoso y puede traer problemas de contencion de recursos.
+
+\begin{code}
+while(true)
+{
+    while(lock); // leemos normalmente
+    while(TestAndSet(&lock)); // leemos y actualizamos atomicamente
+		// sección crítica
+		lock = false;
+		// sección no crítica
+}
+\end{code}
+
+Si bien es mejor que TAS en todas las iteraciones, sigo teniendo mucho overhead por el busy-waiting.
 
 \subsection{Sem\'aforos}
 
@@ -337,7 +354,7 @@ Un sem\'aforo es una variable entera, inicializada con un valor arbitrario, y qu
 
 Los mutex pueden ser utilizados por ejemplo para resolver el problema de la secci\'on cr\'itica. Cuando el mutex tiene el valor 1 y un proceso hace un wait, dej\'andolo en 0, se dice que el proceso toma el mutex. Al hacer un signal de un mutex que est\'a en 0, se dice que el proceso libera el mutex. Para resolver el problema de la secci\'on cr\'itica es necesario tener un mutex inicializado en 1, luego cada proceso que quiere entrar en su secci\'on cr\'itica debe tomar el mutex para entrar, y liberarlo al salir de la secci\'on cr\'itica. De este modo, no puede haber m\'as de un proceso a la vez en la secci\'on cr\'itica.
 
-La diferencia principal entre los semáforos y TAS es el mecanismo que poseen para evitar busy waiting: adem\'as del valor del sem\'aforo, se guarda una lista de procesos en espera. Cada vez que un proceso hace un wait, si tiene que esperar a que el valor del sem\'aforo sea mayor a cero, libera la CPU en la que est\'a corriendo, pasando a la lista de espera asociada al sem\'aforo que pidi\'o. Este proceso no es agregado a la cola de procesos ready sino que, al hacer un signal, el siguiente proceso en la lista de espera, es pasado a la cola de procesos ready. De esta manera la implementaci\'on de los sem\'aforos ser\'ia la siguiente:
+La diferencia principal entre los semáforos y TAS es el mecanismo que poseen para evitar busy waiting: adem\'as del valor del sem\'aforo, se guarda una lista de procesos en espera. Cada vez que un proceso hace un wait, si tiene que esperar a que el valor del sem\'aforo sea mayor a cero, libera la CPU en la que est\'a corriendo, pasando a la lista de espera asociada al sem\'aforo que pidi\'o. Este proceso no es agregado a la cola de procesos ready sino que, al hacer un signal, el siguiente proceso en la lista de espera del semaforo, es pasado a la cola de procesos ready. De esta manera la implementaci\'on de los sem\'aforos ser\'ia la siguiente:
 
 \begin{code}
 struct semaphore{
@@ -346,7 +363,6 @@ struct semaphore{
 };
 \end{code}
 
-\newpage
 \begin{code}
 wait(semaphore *S)
 {
@@ -371,7 +387,7 @@ signal(semaphore *S)
 }
 \end{code}
 
-Con esta implementaci\'on de sem\'aforos, los valores que toman los mismos pueden ser negativos y se usa este valor, cuando es negativo, para poder determinar cu\'antos procesos hay en lista de espera. La funci\'on $block$ bloquea el proceso actual (sac\'andolo de la CPU donde est\'a corriendo sin encolarlo en la cola de procesos ready) mientras que la funci\'on $wakeUp(P)$ encola el proceso $P$ en la cola de procesos ready. Ambas operaciones ($block$ y $wakeUp$) son system calls provistas por el sistema operativo.
+Con esta implementaci\'on de sem\'aforos, los valores que toman los mismos pueden ser negativos y se usan para poder determinar cu\'antos procesos hay en lista de espera. La funci\'on $block$ bloquea el proceso actual (sac\'andolo de la CPU donde est\'a corriendo sin encolarlo en la cola de procesos ready) mientras que la funci\'on $wakeUp(P)$ encola el proceso $P$ en la cola de procesos ready. Ambas operaciones ($block$ y $wakeUp$) son system calls provistas por el sistema operativo.
 
 La cola de procesos en espera por un sem\'aforo no es necesariamente una cola FIFO, sino que puede ser una cola de prioridades o cualquier otro tipo de cola (al igual que las colas de procesos listos para ser cargados en una CPU por el scheduler). Es importante notar que si bien podemos usar cualquier tipo de cola (por ejemplo, una cola LIFO), seg\'un la estrategia que utilizemos para encolar y desencolar podr\'iamos generar inanici\'on.
 
@@ -411,6 +427,7 @@ A()
 		semB.wait();
 		a2;
 }
+
 B()
 {
     b1;
@@ -484,7 +501,7 @@ P()
 }
 \end{code}
 
-En este caso $turnstile$ empieza inicializado en 0 mientras que $turnstile2$ empieza inicializado en 1.
+En este caso $turnstile$ empieza inicializado en 0 mientras que $turnstile2$ empieza inicializado en 1. En un principio no parece obvia la razon de inicializar $turnstile2$ en $1$, ya que su valor sera $0$ al realizar el primer signal en $turnstile$, por lo que podriamos eliminar la linea $10$ sin problema. Sin embargo, si prestamos atencion al estado de los semaforos al final del ciclo, nos daremos cuenta que de no existir esta modificacion en el segundo ciclo $turnstile2$ se encontrara en el valor $1$ y el algoritmo tendra un comportamiento invalido, ya que no esperará a que todos los procesos se encuentren en $turnstile2$ antes de liberar el primero.
 
 \subsubsection{Productor - Consumidor}
 
@@ -502,6 +519,7 @@ producer()
 	      mutex.signal();
 		}
 }
+
 consumer()
 {
     while(true)
@@ -530,6 +548,7 @@ writer()
 		turnstile.signal();
 		roomEmpty.signal();
 }
+
 reader()
 {
     turnstile.wait();
@@ -550,9 +569,184 @@ reader()
 
 En este caso tanto $mutex$ como $roomEmpty$ (que tambi\'en es un mutex) empiezan inicializados en 1, al igual que $turnstile$. $count$ cuenta la cantidad de readers en la secci\'on cr\'itica y empieza inicializado en cero.
 
+\subsubsection{Barbero}
+
+Tenemos una barbería con dos salas, una de espera, con n sillas, y otra donde está la única silla en la que el barbero corta la barba. La resolución del problema debe contemplar las siguientes condiciones:
+
+\begin{itemize}
+ \item Si no hay clientes, el barbero se tira a dormir.
+ \item Cuando llega un cliente, si no hay lugar para esperar, se va.
+ \item Si el barbero está dormido, lo despierta.
+\end{itemize}
+
+
+\begin{code}
+cola clientes;
+Semaphore mutex(0);
+Semaphore cliente_esperando(0);
+cliente() {
+    mutex.wait();
+    if (clientes.size() == n) {
+        mutex.signal();
+        return;
+    }
+    Semaphore cliente(0);
+    clientes.add(cliente);
+    mutex.signal();
+    cliente_esperando.signal();
+    cliente.wait();
+    // Me cortan la barba
+}
+
+barbero() {
+    while (True) {
+        cliente_esperando.wait(); // El barbero duerme
+        mutex.wait();
+        Semaphore cliente = clientes.pop();
+        mutex.signal();
+        cliente.signal();
+        CortarBarba(cliente);
+    }
+}
+\end{code}
+
+\subsubsection{Filósofos que cenan}
+
+Famoso problema, inventado por Dijkstra. No es un problema típico de sincronización, sino que es simplemente un ejemplo de deadlock. Hay 5 filósofos sentados en una mesa, entre cada filósofo hay un cubierto. Los filósofos quieren comer, y para esto deben recoger los dos cubiertos que tienen a sus costados.
+
+La pregunta es cómo sincronizamos a los filósofos para que:
+\begin{itemize}
+ \item Todos coman (no hay deadlock ni inanición).
+ \item Sólo un filósofo tenga un cubierto en cada momento (exclusión mutua).
+ \item Más de un filósofo está comiendo a la vez (porque queremos que terminen rápido y se pongan a pensar de vuelta).
+\end{itemize}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{imgs/philosophers.png}
+    \caption{Representación gráfica del problema de los filósofos que cenan.}
+    \label{fig:philosophers}
+\end{figure}
+
+\begin{code}
+Semaphore cubiertos[5];
+Filosofo(i) {
+    while(!PlatoVacio(i)) {
+        if (i % 2 == 0) {
+            cubiertos[izq(i)].wait();
+            cubiertos[der(i)].wait();
+        } else {
+            cubiertos[der(i)].wait();
+            cubiertos[izq(i)].wait();
+        }
+        DarBocado(i);
+        cubiertos[izq(i)].signal();
+        cubiertos[der(i)].signal();
+    }
+}
+\end{code}
+
 \subsection{Monitores}
 
 Otra alternativa a los sem\'aforos son los monitores. Un monitor es un tipo de datos que contiene variables (normalmente son las variables que se desean proteger de accesos concurrentes) y metodos que operan sobre esas variables, as\'i como un metodo para inicializarlas. Los monitores tambi\'en tienen lo que se conoce como variables de condici\'on, que son parecidas a los sem\'aforos. Una variable de condici\'on tiene tambi\'en las operaciones at\'omicas signal y wait, pero con la diferencia de que s\'olo se puede despertar de un wait con un signal posterior al wait, y no guardan ning\'un valor. Esto es, si ocurre un signal mientras ning\'un proceso est\'a bloqueado por un wait, el signal es ignorado, mientras que si ocurre un signal cuando hay otro proceso esperando por un wait, entonces el proceso que est\'a trabado en wait tiene permiso para seguir ejecut\'andose.
+
+\subsection{Exclusion mutua con registros RW}
+
+Las operaciones atomicas como TAS traen apareado un problema de overhead, ya que la operacion misma es costosa a nivel hardware. Por esto mismo, si estamos en una situacion en donde queremos obtener una mejor performance, no deberiamos utilizarla.
+
+Podremos razonar acerca de los accesos concurrentes a memoria utilizando un modelo. Tendremos un objeto atomico basico: read-write register. El mismo podra variar la cantidad de lectores y escritores que soporta (uno/muchos) y recibira una clasificación según la garantía que ofrece sobre el resultado de una lectura que se solapa con una escritura:
+
+\begin{itemize}
+\item Safe: ninguna garantía. La lectura puede devolver fruta.
+\item Regular: puede devolver el último valor o el nuevo. Más aún, si dos lectu ras se solapan con una misma escritura, las dos podrían devolver distintas cosas.
+\item Atomic: no hay solapamiento. En otras palabras, podemos trazar una línea de tiempo y en cada punto a lo sumo ocurre una operación.
+\end{itemize}
+
+El algoritmo de Peterson soluciona el problema de exclusion mutua con registros RW, en el caso del algoritmo de peterson usa 2 registros SWMR (Singe Write Multiple Read). Los siguientes algoritmos solucionan el problema de la exclusión mutua para n procesos.
+
+\subsubsection{Algoritmo de Dijsktra}
+
+\begin{code}
+ atomic_swmr flag[n];
+ atomic_mwmr turn = 0;
+ 
+ try(i) {
+    flag[i] = 1;
+    while(turn != i) {
+        if (flag[turn] == 0) {
+            turn = i;
+        }
+    }
+    flag[i] = 2;
+    for (int j=0; j < n; j++) {
+        if (i != j && flag[j] == 2) {
+            try();
+            break;
+        }
+    }
+ }
+ 
+ P(i) {
+    try(i);
+    /* Critical section */
+    flag[i] = 0;
+ }
+\end{code}
+
+Este algoritmo es similar al Peterson pero utiliza 3 estados para el flag, 0 cuando no hay pedido para entrar a la seccion critica, 1 cuando se solicita la entrada y 2 cuando cree que es su turno de entrar. El estado 2 se utiliza para desempatar entre todos los procesos que detectaron que la seccion critica estaba libre, accedera aquel que recorra todos los flags de los demas procesos sin detectar un 2. Garantiza EXCL, LOCK-FREE pero no G-PROG.
+
+~
+
+\subsubsection{Panaderia de Lamport}
+
+\begin{code}
+ atomic_swmr choosing[n];
+ atomic_swmr number[n];
+ 
+ P(i) {
+    choosing[i] = 1;
+    number[i] = 1 + max(number);
+    choosing[i] = 0;
+    for (int i=0; i<n; i++) {
+        if (i == j)
+            continue;
+        while (!(choosing[j] == 0)) {}           // wait for j to choose number
+        while (!(number[j] == 0 ||
+            (number[i], i) < (number[j], j))) {} // compare choosen numbers
+    }
+    /* Critical section */
+    number[i] = 0;
+ }
+ 
+\end{code}
+
+Primero todos los procesos sacan número. Cada uno trata de sacar un número distinto a todos los demás. Como están todos haciéndolo al mismo tiempo, probablemente lo hagan mal y varios terminen con el mismo número.
+La idea es que el primero es atendido (es decir, que usa la sección crítica) es aquel con menor número. Como vimos que podía haber repetidos, van a desempatar por el número de proceso. El foreach itera sobre todos los procesos, y la idea es salir de ese ciclo cuando todos los procesos con número más chico hayan sido atendidos. Primero espera a que el j-ésimo proceso saque número (capaz que el j-ésimo se demoró en terminar de sacar número, pero aún así tiene el más chico).
+Luego espera a que tenga número más chico que el proceso j, o bien a (en caso contrario) que j termine de ser atendido. Este algoritmo asegura EXCL, LOCK-FREE y G-PROG.
+
+~
+
+\subsubsection{Fischer}
+\begin{code}
+ atomic_mwmr turn = 0;
+ 
+ P(i) {
+    while (true) {
+        while (turn != 0) {} // wait for turn = 0
+        turn = i;            // takes max d time
+        sleep(D);            // D > d
+        if (turn == i)
+            break;
+    }
+    /* Critical section */
+    turn = 0;
+ }
+\end{code}
+
+Garantiza EXCL y LOCK-FREE si $D > d$. La asunción $D > d$ es una forma de esperar suficiente tiempo para que todos hagan $turn = i$. Entonces, el último que pide el turno se lo queda.
+
+~
 
 \section{Deadlock}
 
@@ -1281,6 +1475,31 @@ Dentro del scheduling global se busca compartir la carga entre los distintos pro
 A la vez la migración puede ser de dos tipos: \textbf{sender initiated} en donde la misma es iniciada por un procesador sobrecargado con el fin de reducir su load; o \textbf{receiver initiated} en donde es iniciada por un procesador libre con el fin de incrementar su load y aprovechar el poder de procesamiento disponible.
 
 En definitiva, la migración es una parte importante de la política de scheduling en sistemas paralelos, y abre otras preguntas: ¿Cuándo hay que migrar un proceso? ¿Qué proceso hay que migrar? ¿A dónde hay que migrarlo? ¿Cómo se difunde el estado?.
+
+\subsection{Comunicacion de mensajes}
+
+\subsubsection{Propiedades}
+
+Requerimientos para una solución de exclusión mutua en sistemas distribuidos:
+[EXCL] Exclusión mutua: el recurso sólo lo puede tener un proceso a la vez.
+Fairness: las solicitudes de uso deben ser cumplidas en el orden en que fueron hechas.
+[LOCK-FREE] Lock-free: el recurso es concedido eventualmente (luego de tiempo finito) a alguno de los procesos que lo solicitó.
+[WAIT-FREE] Wait-free: todo proceso que solicita el recurso lo recibe eventualmente.
+[G-PROG] Progreso global dependiente: si todo proceso que recibe el recurso lo libera eventualmente, entonces todo proceso que solicita el recurso lo recibe eventualmente.
+
+
+\begin{itemize}
+ \item Exclusion mutua (EXCL): el recurso solo puede ser utilizado por un proceso a la vez.
+ \item Progreso (PROG/lock-free):
+ \item Progreso global absoluto (wait-free)
+ \item Progreso global dependiente (G-PROG/starvation-free)
+ \item Justicia (FAIR/fairness)
+\end{itemize}
+
+(wait-free es tambien lock-free)
+
+
+
 
 \end{document}
 
