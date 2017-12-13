@@ -81,6 +81,8 @@ Roberto \textsc{Rama}
 
 Un proceso es un programa en ejecuci\'on. El proceso incluye no s\'olo el c\'odigo del programa sino tambi\'en el estado de los registros, la memoria que utiliza el proceso y todos los dem\'as recursos que utiliza durante su ejecuci\'on.
 
+~
+
 Un proceso tiene cinco posibles estados:
 \begin{itemize}
 \item New: El estado del proceso mientras est\'a siendo creado.
@@ -89,6 +91,8 @@ Un proceso tiene cinco posibles estados:
 \item Waiting: El estado del proceso cuando est\'a esperando un evento como puede ser entrada/salida.
 \item Terminated: El estado del proceso cuando ya finaliz\'o su ejecuci\'on.
 \end{itemize}
+
+~
 
 Todos los procesos est\'an representados en el sistema operativos por su \textbf{Process Control Block (PCB)}. La PCB almacena entre otras cosas
 \begin{itemize}
@@ -105,7 +109,7 @@ Cada proceso es un\'ivocamente identificado por su \textbf{pid (process id)}.
 
 Un proceso puede crear otros procesos. Si un proceso $A$ crea un proceso $B$ decimos que $A$ es el proceso padre, y $B$ es el proceso hijo.
 
-En Linux para crear un proceso, el proceso padre debe llamar a la funci\'on $fork$, que es una system call. Luego de que la instrucci\'on $fork$ es ejecutada, dos procesos pasan a existir en lugar de uno. La forma de reconocer cu\'al es el proceso padre y cu\'al es el proceso hijo es mediante el valor de retorno de $fork$. Si al ejecutarse $fork$ retorna 0, eso quiere decir que el proceso es el hijo, si en cambio retorna un valor distinto de cero, el proceso es el padre y el valor de retorno es el pid del proceso hijo que se acaba de crear.
+En Linux la unica forma de crear un proceso, es que un proceso existente (el padre) llame a la funci\'on $fork$, que es una system call. El proceso init es el proceso padre para todos los procesos usuarios. Luego de que la instrucci\'on $fork$ es ejecutada, dos procesos pasan a existir en lugar de uno. La forma de reconocer cu\'al es el proceso padre y cu\'al es el proceso hijo es mediante el valor de retorno de $fork$. Si al ejecutarse $fork$ retorna 0, eso quiere decir que el proceso es el hijo, si en cambio retorna un valor distinto de cero, el proceso es el padre y el valor de retorno es el pid del proceso hijo que se acaba de crear.
 
 Cuando un proceso es creado, no necesariamente tiene que seguir ejecutando el c\'odigo del proceso padre. La funci\'on $exec$ (que tambi\'en es una system call), permite a un proceso (generalmente es el hijo quien la invoca) cambiar su c\'odigo por el de otro programa. Esto permite que un proceso cree otro proceso, para que ejecute el c\'odigo de otro programa.
 
@@ -251,12 +255,12 @@ Esto puede ocurrir siempre que haya contenci\'on (varios procesos quieren accede
 
 \subsection{Secci\'on cr\'itica}
 
-A veces un proceso tiene que ejecutar un bloque de c\'odigo que implica escribir parte de la memoria compartida o escribir un archivo. Esta parte del c\'odigo en la que el proceso no puede ejecutarse en simult\'aneo con otro proceso que escriba las mismas variables o archivos se la conoce como secci\'on cr\'itica. Solo un proceso a la vez puede estar ejecutando esta sección. Esta sección critica puede ser vista tambien como un recurso, ya que en otros casos no es una porcion de codigo si no un recurso del sistema el que quiere ser accedido. La soluci\'on total al problema de la secci\'on cr\'itica tiene tres requerimientos:
+A veces un proceso tiene que ejecutar un bloque de c\'odigo que implica escribir parte de la memoria compartida o escribir un archivo. Esta parte del c\'odigo en la que el proceso no puede ejecutarse en simult\'aneo con otro proceso que escriba las mismas variables o archivos se la conoce como secci\'on cr\'itica. Solo un proceso a la vez puede estar ejecutando esta sección. Esta sección critica puede ser vista tambien como un recurso, ya que en otros casos no es una porcion de codigo si no un recurso del sistema el que quiere ser accedido. Una soluci\'on correcta al problema de la secci\'on cr\'itica cumple tres requisitos:
 
 \begin{itemize}
 \item Exclusión mutua (mutual exclusion / EXCL): Por cada recurso solo puede existir un proceso que este haciendo uso del mismo.
-\item Progreso (freedom from deadlock / LOCK-FREE / PROG): La decisi\'on de a qu\'e proceso se le asigna un recurso no puede ser postpuesta indefinidamente. Dicho de otra manera, cuando hay un conjunto de procesos en espera de un recurso, se le debe otorgar acceso a alguno de los procesos en un periodo de tiempo acotado. Es importante remarcar que esta propiedad no remarca a que proceso se le debe otorgar acceso.
-\item Progreso global absoluto o espera acotada (freedom from starvation / WAIT-FREE): En los casos en que tengamos muchos procesos queriendo acceder a un mismo recurso, la propiedad anterior no es suficiente ya que puede producir starvation. WAIT-FREE nos dice que existe un l\'imite de cu\'antas veces pueden obtener un recurso otros procesos antes de que un proceso que solicitó el recurso lo obtenga. Es importante remarcar que WAIT-FREE implica LOCK-FREE, ya que esta propiedad predica sobre lo mismo pero extendiendo su definición a cada uno de los procesos particulares.
+\item Progreso (freedom from deadlock / LOCK-FREE / PROG): Cuando hay un conjunto de procesos en espera de un recurso, se le debe otorgar acceso a alguno de los procesos en un periodo de tiempo acotado. Es importante remarcar que esta propiedad no predica sobre a que proceso se le debe otorgar acceso, por lo que de haber muchos procesos, puede producir inanición.
+\item Progreso global absoluto o espera acotada (freedom from starvation / WAIT-FREE): Existe un l\'imite de cu\'antas veces pueden obtener un recurso otros procesos antes de que un proceso que solicitó el recurso lo obtenga. Es importante remarcar que WAIT-FREE implica LOCK-FREE, ya que esta propiedad predica sobre lo mismo pero extendiendo su alcance a cada uno de los procesos particulares.
 \end{itemize}
 
 
@@ -327,9 +331,9 @@ while(true)
 
 Para evitar inanici\'on la variable $lock$ debe ser inicializada en false. Adem\'as, como TestAndSet es at\'omica, no puede haber condici\'on de carrera si se ejecutan dos TestAndSets en dos procesos separados ya que uno se ejecutar\'a primero y el otro despu\'es.
 
-En los casos de la soluci\'on de Peterson y de la implementaci\'on de locks con TestAndSet, estamos haciendo un while que cicla permanentemente hasta que le toca el turno al proceso de correr su secci\'on cr\'itica. Esto se llama \textbf{busy waiting}, y en particular es llamado spin-wait sobre TAS. Este tipo de implementaciones tienen un overhead muy grande por la utilizacion de busy-waiting. Hay otras implementaciones que intentan suplir esto utilizando un sleep en el cuerpo del ciclo, pero puede provocar innanicion en ciertos casos y no es tan efectivo.
+En los casos de la soluci\'on de Peterson y de la implementaci\'on de locks con TestAndSet, estamos haciendo un while que cicla permanentemente hasta que le toca el turno al proceso de correr su secci\'on cr\'itica. Esto se llama \textbf{busy waiting}, y en particular es llamado spin-wait sobre TAS. Este tipo de implementaciones tienen un overhead muy grande por la utilizacion de busy-waiting. Hay otras implementaciones que intentan suplir esto utilizando un sleep en el cuerpo del ciclo, pero puede provocar inanición en ciertos casos y no es tan efectivo.
 
-Otra solucion llamada Test and Test-And-Set (TTAS) reduce el overhead de acceder y modificar la memoria de manera atomica, ya que esto ultimo es costoso y puede traer problemas de contencion de recursos.
+Otra solucion de locks llamada Test and Test-And-Set (TTAS) reduce el overhead de acceder y modificar la memoria de manera atomica, ya que esto ultimo es costoso y puede traer problemas de contencion de recursos.
 
 \begin{code}
 while(true)
@@ -679,14 +683,14 @@ El algoritmo de Peterson soluciona el problema de exclusion mutua con registros 
     flag[i] = 2;
     for (int j=0; j < n; j++) {
         if (i != j && flag[j] == 2) {
-            try();
-            break;
+            return false;               // try again
         }
     }
+    return true;                        // accesed critical section
  }
  
  P(i) {
-    try(i);
+    while(!try(i)) {}
     /* Critical section */
     flag[i] = 0;
  }
@@ -773,13 +777,13 @@ El algoritmo del banquero es uno de los algoritmos m\'as famosos de prevenci\'on
 
 \subsubsection{Detecci\'on de estados seguros}
 
-Hasta ahora venimos hablando de estados seguros pero no dijimos todav\'ia c\'omo determinar si un estado es seguro. Supongamos que tenemos $M$ recursos distintos, y $N$ procesos. Entonces el algoritmo, que tiene complejidad $O(MN^2)$, consiste en los siguiente pasos:
+Supongamos que tenemos $M$ recursos distintos, y $N$ procesos. Entonces el algoritmo, que tiene complejidad $O(MN^2)$, consiste en los siguiente pasos:
 
 \begin{enumerate}
 \item Inicializar un vector booleano de longitud $N$ en false. Cada posición $i$ en este vector contendrá un valor que indicará si el proceso $P_i$ terminó o no.
-\item Buscar un proceso tal que no haya terminado y que todos los recursos que necesita para terminar est\'an disponibles. Si no existe dicho proceso ir al paso 4.
+\item Buscar un proceso tal que no haya terminado y que todos los recursos que necesita para terminar est\'an disponibles. Si no existe dicho proceso el estado no es seguro.
 \item Marcar al proceso del paso 2 como terminado y liberar todos sus recursos. Volver al paso 2.
-\item Si todos los procesos terminaron, el estado es seguro, caso contrario no lo es.
+\item Si todos los procesos terminaron, el estado es seguro.
 \end{enumerate}
 
 \section{Archivos y Directorios}
@@ -791,8 +795,8 @@ Definimos a un archivo como una secuencia de bytes almacenados en una unidad de 
 Un archivo generalmente tiene los siguientes atributos:
 
 \begin{itemize}
-\item Nombre: El nombre del archivo, posiblemente con su extensi\'on.
 \item Identificador: Un nombre que el usuario no ve, que sirve para identificarlo en el file system (m\'as adelante veremos qu\'e es un file system)
+\item Nombre: El nombre del archivo, posiblemente con su extensi\'on.
 \item Tipo: Puede ser ejecutable, archivo de texto plano, una imagen, etc.
 \item Ubicaci\'on: En qu\'e dispositivo y qu\'e directorio dentro del dispositivo se encuentra el archivo.
 \item Tama\~no: El tama\~no en bytes o en bloques del archivo.
@@ -889,7 +893,7 @@ La implementaci\'on de UNIX ext2 de i-nodos reserva las últimas tres entradas d
 
 El \'arbol de directorios en UNIX se implementa con un i-nodo especial que representa el root directory, este i-nodo tiene como datos una lista de entradas en el formato (i-nodo, nombre de archivo, tipo de archivo). El tipo de archivo puede ser a su vez otro directorio, donde su i-nodo contendrá la lista de archivos que contiene. En algunos casos, cuando los directorios tienen muchos archivos, en lugar de guardar los nombres de los archivos con sus i-nodos correspondientes uno por uno, se utiliza una tabla de hash que hashea los nombres de los archivos y nos da los pares de (nombre de archivo,i-nodo) que matchean ese hash.
 
-En ext2 se encuentran en orden el boot block, el superblock, los i-nodos y los bloques de datos. El superblock es un bloque que contiene informaci\'on sobre el file system, como por ejemplo qu\'e file system es y cu\'antos i-nodos tiene, como así también el numero de i-node que corresponde al root directory.
+En ext2 se encuentran en orden el boot block, el superblock, los i-nodos y los bloques de datos. El \textbf{superblock} es un bloque que contiene informaci\'on sobre el file system, como por ejemplo qu\'e file system es y cu\'antos i-nodos tiene, como así también el numero de i-node que corresponde al root directory.
 
 \subsubsection{Atributos}
 
@@ -910,6 +914,13 @@ Un problema importante a resolver por el file system es c\'omo mantener la lista
 
 Una es mantener un bitmap con cada bit en 0 si el bloque est\'a libre y en 1 si el bloque est\'a ocupado. Por ejemplo con bloques de 8KB, y un disco de 500GB, necesitamos alrededor de 1000 bloques para almacenar el bitmap. Se suele ademas mantener mapas distintos para i-nodos y bloques de datos. Dado que esto puede producir mapas de bits extremadamente grandes, ext2 utiliza los llamados \textbf{block groups}, generalmente análogos a los grupos de cilindros con el propósito minimizar la cantidad de seeks cuando se leen grandes cantidades de datos contiguos. Cada block group recibe una copia del superblock y la tabla descriptora de block groups, y todos los block groups contienen un bitmap de bloques de datos, un bitmap de i-nodos, la tabla de i-nodos y los bloques de datos correspondientes a dicho grupo de bloques.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{imgs/block_groups.png}
+    \caption{Composición de block groups y del FS en general.}
+    \label{fig:block_groups}
+\end{figure}
+
 La otra solución es utilizar una lista enlazada, manteniendo una lista de bloques libres, en los mismos bloques libres. Guardamos un puntero al primer bloque libre, y en ese bloque libre guardamos una lista de bloques libres, reservando una entrada para el pr\'oximo bloque donde contin\'ua la lista. La ventaja de esta solución es que no utilizamos almacenamiento adicional para guardar la información de bloques libres, ya que a medida que vamos teniendo mas bloques ocupados esta lista se achica y entra en los pocos bloques libres que tenemos.
 
 Una optimizaci\'on a esta \'ultima implementaci\'on es guardar un par que tenga un bloque libre, y la cantidad de bloques libres a partir de ese bloque. Esta optimizaci\'on, sin embargo, se vuelve ineficiente cuando el disco se empieza a fragmentar demasiado.
@@ -926,7 +937,7 @@ El journal se graba en un buffer circular en disco, y es mucho m\'as r\'apido es
 
 Existen file systems para sistemas distribuidos, en donde un file system reside en un servidor y varios clientes pueden acceder a los archivos del file system. Un ejemplo de un network file system es NFS. NFS permite montar directorios de un file system remoto en un file system local para permitir el acceso a los archivos como si fuesen parte del file system local. Para soportar esto, es necesario que todas las operaciones sobre el FS local y remoto tengan la misma interfaz.
 
-El \textbf{Virtual File System} es una interfaz entre el kernel y un FS concreto. El mismo abstrae operaciones comunes a todos los FS, de modo que el kernel pueda operar de la misma forma, indistintamente de ser un FS local o remoto. Logra esto utilizando la nocion de \textbf{vnodos}, cuando el FS es local se corresponde con un inodo, de lo contrario tiene otra información. Por lo que, tanto como los FS locales y remotos implementan vnodos.
+El \textbf{Virtual File System} es una interfaz entre el kernel y un FS concreto. El mismo abstrae operaciones comunes a todos los FS, de modo que el kernel pueda operar de la misma forma, indistintamente de ser un FS local o remoto. Logra esto utilizando la nocion de \textbf{vnodos}. Cuando el FS es local se corresponde con un inodo, de lo contrario tiene otra información. Tanto como los FS locales y remotos implementan vnodos.
 
 De esta manera los pedidos que llegan al VFS pueden ser despachados al FS o a NFS, por lo cual el cliente de NFS debe ser un módulo de kernel (ya que el FS hace la llamada a nivel kernel), pero el servidor de NFS puede correr a nivel usuario.
 
@@ -1086,11 +1097,64 @@ Para evitar ese problema se suele utilizar RAID (Redundant Array of Inexpensive 
 \item RAID 1 (mirroring): Se mantienen dos copias del mismo disco. Es costoso en términos espaciales pero soporta la caída de un disco, el striping se realiza a nivel de bloque. Permite la lectura en simultaneo si los discos están en diferentes controladoras, sin embargo no hay beneficio en la escritura. Es normalmente utilizado en configuraciones hogareñas ya que requiere solamente 2 discos.
 \item RAID 0+1: Es un RAID 1 de dos RAID 0. El RAID 1 provee redundancia y el RAID 0 rendimiento. Si algún disco se cae en esta configuración el sistema dejará de funcionar hasta que el mismo sea remplazado.
 \item RAID 1+0: Es un RAID 0 de dos RAID 1. Es mejor que RAID 0+1 ya que si se cae un disco en un RAID 0+1 todo el RAID 0 queda inutilizable, en cambio si se cae un disco en un RAID 1+0 s\'olo ese disco queda inutilizable. Si se caen dos discos en un RAID 0+1 la probabilidad de que todos los discos queden inutilizables es $\frac{2}{3}$ mientras que en un RAID 1+0 es $\frac{1}{3}$. Es igual de costoso que RAID 0+1.
+
+\begin{figure}[!htb]
+\minipage{0.15\textwidth}
+  \includegraphics[width=\linewidth]{imgs/raid_0.png}
+  \caption{Raid 0}\label{fig:raid_0}
+\endminipage\hfill
+\minipage{0.15\textwidth}
+  \includegraphics[width=\linewidth]{imgs/raid_1.png}
+  \caption{Raid 1}\label{fig:raid_1}
+\endminipage\hfill
+\minipage{0.23\textwidth}
+  \includegraphics[width=\linewidth]{imgs/raid_0+1.png}
+  \caption{Raid 0+1}\label{fig:raid_01}
+\endminipage\hfill
+\minipage{0.23\textwidth}
+  \includegraphics[width=\linewidth]{imgs/raid_1+0.png}
+  \caption{Raid 1+0}\label{fig:raid_10}
+\endminipage
+\end{figure}
+
 \item RAID 2: Requiere 3 discos de paridad por cada 4 de datos. Es m\'as lento que RAID 1. Cada bloque l\'ogico se distribuye entre todos los discos, y utiliza Hamming más striping a nivel de bits. Todas las lecturas y escrituras utilizan los 7 discos, ya que todos están configurados para girar con la misma orientación angular.
+
 \item RAID 3: Requiere 1 disco de paridad por cada 4 de datos. Es m\'as eficiente que RAID 2. Al igual que en RAID 2, cada bloque l\'ogico se distribuye entre todos los discos, lo que ofrece mas velocidad para cada operación pero hay menos disponibilidad para operaciones que podrían ser concurrentes. Todas las escrituras utilizan el disco de paridad, por lo que se vuelve un cuello de botella.
+
+\begin{figure}[!htb]
+\minipage{0.55\textwidth}
+  \includegraphics[width=\linewidth]{imgs/raid_2.png}
+  \caption{Raid 2}\label{fig:raid_2}
+\endminipage\hfill
+\minipage{0.35\textwidth}
+  \includegraphics[width=\linewidth]{imgs/raid_3.png}
+  \caption{Raid 3}\label{fig:raid_3}
+\endminipage\hfill
+\end{figure}
+
 \item RAID 4: Es parecido a RAID 3 pero hace el stripping a nivel de bloque.
 \item RAID 5: En vez de tener un disco de paridad, distribuye la paridad entre todos los discos. Esto hace que no haya un cuello de botella en el disco de paridad. Cada N discos de datos, requiere 1 disco mas; sin embargo el número mínimo de discos que necesita RAID 5 para funcionar es 3. En total quedan N+1 discos, entre datos y redundancia mezclados.
+
+\begin{figure}[!htb]
+\minipage{0.40\textwidth}
+  \includegraphics[width=\linewidth]{imgs/raid_4.png}
+  \caption{Raid 4}\label{fig:raid_4}
+\endminipage\hfill
+\minipage{0.40\textwidth}
+  \includegraphics[width=\linewidth]{imgs/raid_5.png}
+  \caption{Raid 5}\label{fig:raid_5}
+\endminipage
+\end{figure}
+
 \item RAID 6: Es como RAID 5 pero utilizando dos bloques de paridad. Los dos bloques de paridad usan paridades distintas, uno de ellos la paridad com\'un y corriente y el otro alg\'un c\'odigo de correci\'on de errores como por ejemplo el c\'odigo de Reed-Solomon. Esta configuración soporta la perdida de hasta 2 discos.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{imgs/raid_6.png}
+    \caption{Raid 6}
+    \label{fig:raid_6}
+\end{figure}
+
 \end{itemize}
 
 RAID no proteje contra eventos como borrar accidentalmente un archivo, por eso se suele combinar RAID con backups.
