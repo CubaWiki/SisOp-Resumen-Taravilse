@@ -714,8 +714,8 @@ Este algoritmo es similar al Peterson pero utiliza 3 estados para el flag, 0 cua
         if (i == j)
             continue;
         while (!(choosing[j] == 0)) {}           // wait for j to choose number
-        while (!(number[j] == 0 ||
-            (number[i], i) < (number[j], j))) {} // compare choosen numbers
+        while (number[j] != 0 &&
+            (number[j], j) < (number[i], i)) {} // compare choosen numbers
     }
     /* Critical section */
     number[i] = 0;
