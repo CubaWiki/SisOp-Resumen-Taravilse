@@ -92,6 +92,13 @@ Un proceso tiene cinco posibles estados:
 \item Terminated: El estado del proceso cuando ya finaliz\'o su ejecuci\'on.
 \end{itemize}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{imgs/process_status.png}
+    \caption{Maquina de estados representando los estados de un proceso.}
+    \label{fig:process_status}
+\end{figure}
+
 ~
 
 Todos los procesos est\'an representados en el sistema operativos por su \textbf{Process Control Block (PCB)}. La PCB almacena entre otras cosas
@@ -141,6 +148,13 @@ Hasta ahora estudiamos a los procesos como un \'unico hilo de ejecuci\'on que se
 \item Mientras que crear un proceso es muy costoso en t\'erminos de eficiencia, crear un thread es mucho m\'as econ\'omico, entre otras cosas porque no se tiene que reservar memoria o crear una PCB.
 \item En arquitecturas con m\'ultiples procesadores el uso de threads permite la ejecuci\'on de un proceso en m\'as de una CPU, permitiendo as\'i que al correr distintos threads del mismo proceso en distintas CPUs, el proceso se ejecute m\'as r\'apido que un proceso monothread.
 \end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{imgs/process_threads.png}
+    \caption{Comparacion de recursos compartidos entre proceso single-threaded y multi-threaded.}
+    \label{fig:process_threads}
+\end{figure}
 
 \subsection{Pthreads}
 
@@ -338,8 +352,8 @@ Otra solucion de locks llamada Test and Test-And-Set (TTAS) reduce el overhead d
 \begin{code}
 while(true)
 {
-    while(lock); // leemos normalmente
-    while(TestAndSet(&lock)); // leemos y actualizamos atomicamente
+    while(lock);                // leemos normalmente
+    while(TestAndSet(&lock));   // leemos y actualizamos atomicamente
 		// sección crítica
 		lock = false;
 		// sección no crítica
@@ -713,9 +727,9 @@ Este algoritmo es similar al Peterson pero utiliza 3 estados para el flag, 0 cua
     for (int i=0; i<n; i++) {
         if (i == j)
             continue;
-        while (!(choosing[j] == 0)) {}           // wait for j to choose number
+        while (!(choosing[j] == 0)) {}           // esperamos que j elija número
         while (number[j] != 0 &&
-            (number[j], j) < (number[i], i)) {} // compare choosen numbers
+            (number[j], j) < (number[i], i)) {}  // comparamos números elegidos
     }
     /* Critical section */
     number[i] = 0;
@@ -723,26 +737,24 @@ Este algoritmo es similar al Peterson pero utiliza 3 estados para el flag, 0 cua
  
 \end{code}
 
-Primero todos los procesos sacan número. Cada uno trata de sacar un número distinto a todos los demás. Como están todos haciéndolo al mismo tiempo, probablemente lo hagan mal y varios terminen con el mismo número.
-La idea es que el primero es atendido (es decir, que usa la sección crítica) es aquel con menor número. Como vimos que podía haber repetidos, van a desempatar por el número de proceso. El foreach itera sobre todos los procesos, y la idea es salir de ese ciclo cuando todos los procesos con número más chico hayan sido atendidos. Primero espera a que el j-ésimo proceso saque número (capaz que el j-ésimo se demoró en terminar de sacar número, pero aún así tiene el más chico).
-Luego espera a que tenga número más chico que el proceso j, o bien a (en caso contrario) que j termine de ser atendido. Este algoritmo asegura EXCL, LOCK-FREE y G-PROG.
+Todos los procesos sacan número, cada uno trata de sacar un número distinto a todos los demás. Como todos los procesos estan realizando lo mismo al mismo tiempo, probablemente alguno lo haga mal y varios terminen con el mismo número. El primero que es atendido (es decir, que usa la sección crítica) es aquel con menor número, pero como vimos que podía haber repetidos, van a desempatar por el número de proceso. Luego, el foreach itera sobre todos los procesos, y saldremos de ese ciclo cuando todos los procesos con el número más chico hayan sido atendidos. Primero espera a que el j-ésimo proceso saque número (capaz que el j-ésimo se demoró en terminar de sacar número, pero aún así tiene el más chico), y luego espera a que tenga número más chico que el proceso j, o bien a (en caso contrario) que j termine de ser atendido. Este algoritmo asegura EXCL, LOCK-FREE y G-PROG.
 
 ~
 
 \subsubsection{Fischer}
 \begin{code}
- atomic_mwmr turn = 0;
+ atomic_mwmr turn = -1;
  
  P(i) {
     while (true) {
-        while (turn != 0) {} // wait for turn = 0
-        turn = i;            // takes max d time
-        sleep(D);            // D > d
+        while (turn != -1) {} // esperamos que este libre
+        turn = i;             // toma a lo sumo d tiempo
+        sleep(D);             // D > d
         if (turn == i)
             break;
     }
     /* Critical section */
-    turn = 0;
+    turn = -1;
  }
 \end{code}
 
@@ -785,6 +797,13 @@ Supongamos que tenemos $M$ recursos distintos, y $N$ procesos. Entonces el algor
 \item Marcar al proceso del paso 2 como terminado y liberar todos sus recursos. Volver al paso 2.
 \item Si todos los procesos terminaron, el estado es seguro.
 \end{enumerate}
+
+\subsection{Livelock}
+Un conjunto de procesos está en livelock si estos continuamente cambian su estado en respuesta a los cambios de estado de los otros procesos del conjunto.
+
+Ejemplo 1: queda poco espacio en disco. El proceso A detecta la situación y notifica al proceso B. B registra el evento en disco, disminuyendo el espacio libre, lo que hace que A detecte la situación y...
+
+Ejemplo 2: tenemos poco uso de CPU por el thrashing que produce una gran cantidad de programas en memoria. El proceso A detecta el bajo uso de CPU y le informa al proceso B (scheduler) que cargue más procesos en memoria para aumentar el MPL. El proceso B carga un nuevo programa en memoria, lo cual hace que haya aún más trashing y aún menos uso de CPU, lo cual hace que el proceso A detecta la situación y...
 
 \section{Archivos y Directorios}
 
@@ -999,7 +1018,7 @@ El driver utiliza los registros de puerto del dispositivo para peri\'odicamente 
 
 \subsubsection{Interrupciones}
 
-El dispositivo le avisa al controlador de interrupciones en el CPU que termin\'o de hacer su tarea haciendo uso del IRL (interrupt-request line), que la CPU sensa luego de cada instrucción. Una vez que el controlador decida atender la interrupci\'on, derivará el control a la rutina asignada a dicha interrupción. Esta rutina vive dentro del subsistema de E/S, que a su vez derivara el control al driver. Cuando interviene la CPU estamos ante una E/S programada (Programmed I/O). La ventaja de esta alternativa es que si la comunicación es poco frecuente ahorra mucha CPU, la desventaja es que tendremos interrupciones asincrónicas.
+El dispositivo le avisa al controlador de interrupciones en el CPU que termin\'o de hacer su tarea haciendo uso del IRL (interrupt-request line), que la CPU sensa luego de cada instrucción. Una vez que el CPU decida atender la interrupci\'on, derivará el control a la rutina asignada a dicha interrupción. Esta rutina vive dentro del subsistema de E/S, que a su vez derivara el control al driver correspondiente al dispositivo que interrumpio, de forma tal de manejar de manera adecuada la situación. Cuando interviene la CPU estamos ante una E/S programada (Programmed I/O). La ventaja de esta alternativa es que si la comunicación es poco frecuente ahorra mucha CPU, la desventaja es que tendremos interrupciones asincrónicas.
 
 \subsubsection{DMA}
 
@@ -1022,6 +1041,14 @@ Para efectuar una lectura o escritura, hay que: mover el cabezal, para acomodarl
 De estas etapas mover el cabezal es la mas lenta de ellas, y el tiempo insumido por este movimiento es llamado seek time. Tendremos tambien la llamada rotational latency que es el tiempo necesario para rotar el disco y ubicarlo sobre el sector buscado.
 
 Existen varias pol\'iticas de scheduling de acceso a disco, algunas de las cuales optimizan el seek time para hacer los accesos a disco m\'as r\'apidos.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{imgs/parts_hdd.png}
+    \caption{Ilustracion de las partes de un disco rigido.}
+    \label{fig:parts_hdd}
+\end{figure}
+
 
 \subsubsection{First Come First Served}
 
@@ -1055,7 +1082,7 @@ El write amplification sucede cuando los bloques escritos a disco superan el tam
 
 \subsubsection{Formateo f\'isico}
 
-Al formatear los discos se crean c\'odigos en forma de prefijo y posfijo en cada sector que sirven a la controladora para detectar y corregir errores, estos códigos son llamados códigos de detección de errores (ECC). Cuando el controlador escribe un sector, se recalcula el ECC para dicho sector y se lo guarda. Luego, al leer un sector también se recalcula el ECC y si el código recalculado no coincide con el ECC almacenado, indica que el sector esta dañado.
+Al formatear los discos se crean c\'odigos en forma de prefijo y posfijo en cada sector que sirven a la controladora para detectar y corregir errores, estos códigos son llamados códigos de detección de errores (ECC). Cuando el controlador escribe un sector, se calcula el ECC para dicho sector y se lo guarda. Luego, al leer un sector se recalcula el ECC y si el código recalculado no coincide con el ECC almacenado, indica que el sector esta dañado.
 
 Los discos SCSI vienen con sectores extra para reemplazar a los defectuosos. La controladora es la encargada de reemplazar un sector defectuoso por uno de los sectores extra actualizando una tabla interna. Para no interferir con el scheduler de E/S los discos suelen traer sectores extra en todos los cilindros.
 
@@ -1071,8 +1098,7 @@ forma en que se guardan los datos. Por ejemplo, como sector de swap.
 
 \subsubsection{Booteo}
 El bootstrap es pequeño programa en memoria ROM (normalmente ubicado en el mother) que permite inicializar aspectos básicos del sistema, como los registros de CPU, controladores de dispositivos y el contenido de memoria. En general el bootstrap se limita a inicializar lo básico, y luego
-carga un programa que hace la segunda parte del booteo. Para esto, le indica al controlador de disco que lea los bloques de booteo de disco (no hay drivers en este punto). 
-Una vez cargados en memoria, comienza la ejecución de este segundo bootstrap. El segundo bootstrap suele conocer la partición donde se encuentra el SO. Se encarga de cargarlo y comenzar su ejecución.
+carga un programa que hace la segunda parte del booteo. Para esto, le indica al controlador de disco que lea los bloques de booteo de disco, conocidos como \textbf{Master Boot Record} (no hay drivers en este punto). Una vez cargados en memoria, comienza la ejecución de este segundo bootstrap. El segundo bootstrap suele conocer la partición donde se encuentra el SO. Se encarga de cargarlo y comenzar su ejecución.
 
 \subsection{Backup}
 
@@ -1119,10 +1145,10 @@ Para evitar ese problema se suele utilizar RAID (Redundant Array of Inexpensive 
 
 \item RAID 2: Requiere 3 discos de paridad por cada 4 de datos. Es m\'as lento que RAID 1. Cada bloque l\'ogico se distribuye entre todos los discos, y utiliza Hamming más striping a nivel de bits. Todas las lecturas y escrituras utilizan los 7 discos, ya que todos están configurados para girar con la misma orientación angular.
 
-\item RAID 3: Requiere 1 disco de paridad por cada 4 de datos. Es m\'as eficiente que RAID 2. Al igual que en RAID 2, cada bloque l\'ogico se distribuye entre todos los discos, lo que ofrece mas velocidad para cada operación pero hay menos disponibilidad para operaciones que podrían ser concurrentes. Todas las escrituras utilizan el disco de paridad, por lo que se vuelve un cuello de botella.
+\item RAID 3: Requiere 1 disco de paridad por cada 3 de datos. Es m\'as eficiente que RAID 2. Al igual que en RAID 2, cada bloque l\'ogico se distribuye entre todos los discos, lo que ofrece mas velocidad para cada operación pero hay menos disponibilidad para operaciones que podrían ser concurrentes. Todas las escrituras utilizan el disco de paridad, por lo que se vuelve un cuello de botella.
 
-\begin{figure}[!htb]
-\minipage{0.55\textwidth}
+\begin{figure}[H]
+\minipage{0.50\textwidth}
   \includegraphics[width=\linewidth]{imgs/raid_2.png}
   \caption{Raid 2}\label{fig:raid_2}
 \endminipage\hfill
@@ -1234,7 +1260,7 @@ La paginaci\'on consiste en dividir la memoria virtual (o l\'ogica) en bloques d
 Las páginas pueden ser guardadas a disco para realizar swapping. Si en el momento de pedir una p\'agina, esta no se encuentra en memoria, se produce una page fault (excepci\'on del sistema operativo), y la rutina de atenci\'on se encarga de cargar la p\'agina en memoria. 
 
 \subsubsection{Tabla de páginas}
-Para saber si una p\'agina est\'a en memoria y en qu\'e frame se encuentra, la MMU guarda una tabla de p\'aginas con una entrada por cada p\'agina. En cada entrada entre diversos datos se guarda un bit que indica si la p\'agina est\'a cargada en memoria y el \'indice del frame en el que est\'a cargada. Adem\'as se guardan bits que indican, por ejemplo, si la p\'agina fue modificada luego de ser cargada en memoria, para saber si guardarla en disco al desalojarla o simplemente descartarla y quedarse con la versi\'on que ya hab\'ia en disco. Es importante aclarar que hay una tabla de p\'aginas para cada proceso, es decir, si tenemos $N$ procesos tendremos $N$ tablas de p\'aginas. Esto nos introduce un problema: si por ejemplo tuviésemos 4GB de memoria, y p\'aginas de 4KB, tendr\'iamos una tabla de p\'aginas con un mill\'on de entradas; y esto estaría replicado para cada proceso. 
+Para saber si una p\'agina est\'a en memoria y en qu\'e frame se encuentra, la MMU guarda una tabla de p\'aginas con una entrada por cada p\'agina. En cada entrada entre diversos datos se guarda un bit que indica si la p\'agina est\'a cargada en memoria y el \'indice del frame en el que est\'a cargada. Adem\'as se guardan bits que indican, por ejemplo, si la p\'agina fue modificada luego de ser cargada en memoria, para saber si guardarla en disco al desalojarla o simplemente descartarla y quedarse con la versi\'on que ya hab\'ia en disco. Es importante aclarar que hay una tabla de p\'aginas para cada proceso, es decir, si tenemos $N$ procesos tendremos $N$ tablas de p\'aginas. Esto nos introduce un problema: si por ejemplo tuviésemos 4GB de memoria, y p\'aginas de 4KB, tendr\'iamos una tabla de p\'aginas con un mill\'on de entradas, replicada además para cada proceso. 
 
 \subsubsection{Directorio de tablas de páginas}
 Se suele dividir las tablas en dos niveles: un directorio de tablas de p\'aginas que apunta a tablas de p\'aginas, a su vez cada una de estas tablas de paginas tendrán en sus entradas las paginas que serán utilizadas por el programa. As\'i, si un proceso usa menos de 4MB de memoria, y las p\'aginas ocupan 4KB, entonces podemos tener un directorio de tablas de p\'aginas con 1024 entradas, una de ellas apuntando a una tabla de p\'aginas con 1024 entradas, y podemos direccionar los 4MB (1024 p\'aginas de 4KB) con tan solo 8KB (4KB del directorio de tablas y 4KB de la \'unica tabla).
@@ -1293,13 +1319,13 @@ El algoritmo Not Recently Used (NRU) desaloja de memoria una p\'agina al azar de
 
 \subsection{Fragmentación con paginación}
 
-Como vimos anteriormente paginación es un método mucho mas dócil y sencillo que segmentación, por ello es utilizado en los sistemas modernos. Sin embargo, la segmentación no puede ser desactivada en las arquitecturas modernas, por lo que se implementa lo que se llama ``flat segmentation''. Los sistemas operativos modernos solamente definen 4 segmentos: Kernel Code Segment, Kernel Data Segment, User Code Segment y User Data Segment. Esto significa que todos los procesos de usuarios tienen los mismos segmentos de código y datos (por ende, el mismo selector de segmento). Los segmentos solamente cambian cuando se va de usuario a kernel, y se utiliza justamente para diferenciar el espacio de memoria y el modo en el que se esta corriendo (anillo 1 vs anillo 3).
+Como vimos anteriormente paginación es un método mucho mas dócil y sencillo que segmentación, por ello es utilizado en los sistemas modernos. Sin embargo, la segmentación no puede ser desactivada en las arquitecturas modernas, por lo que se implementa lo que se llama ``flat segmentation''. Los sistemas operativos modernos solamente definen 4 segmentos: Kernel Code Segment, Kernel Data Segment, User Code Segment y User Data Segment. Esto significa que todos los procesos de usuarios tienen los mismos segmentos de código y datos (por ende, el mismo selector de segmento). Los segmentos solamente cambian cuando se va de usuario a kernel, y se utiliza justamente para diferenciar el espacio de memoria y el modo en el que se esta corriendo (anillo 0 vs anillo 3).
 
 Luego, durante la resolución se resuelve la dirección lineal utilizando la dirección lógica, calculándola utilizando el descriptor de segmento, y luego se resuelve la dirección física utilizando la dirección lineal, utilizando la paginación multinivel.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{imgs/memory_paged_segmentation.png}
+    \includegraphics[width=0.55\textwidth]{imgs/memory_paged_segmentation.png}
     \caption{Resolución de una dirección física utilizando fragmentación con paginación multinivel.}
     \label{fig:memory_paged_segmentation}
 \end{figure}
@@ -1409,9 +1435,9 @@ El DAC (\textbf{Discretionary Access Control}), es otro esquema de permisos (ACL
 
 \subsubsection{DAC en Linux}
 
-El Linux se utiliza DAC, cada archivo tiene un 3 categorías de permisos aplicadas a distintos grupos de sujetos: dueño, grupo y otros. En cada categoría se pueden definir permisos particulares para un grupo de escritura, lectura y ejecución (r, w, x). También tendremos SETUID y SETGID que son permisos de acceso especiales que pueden asignarse a archivos o directorios para permitir a usuarios del sistema ejecutar binarios con privilegios elevados, se denota con s. Se pueden activar estos bits utilizando chmod u<+/->s <archivo> y chmod g<+/->s <archivo>. Todos los usuarios contaran con un id y podrán pertenecer a varios grupos de usuarios, los grupos también contaran con ids.
+El Linux se utiliza DAC, cada archivo tiene un 3 categorías de permisos aplicadas a distintos grupos de sujetos: dueño, grupo y otros. En cada categoría se pueden definir permisos particulares para un grupo de escritura, lectura y ejecución (r, w, x). También tendremos SETUID y SETGID que son permisos de acceso especiales que pueden asignarse a archivos o directorios para permitir a usuarios del sistema ejecutar binarios con privilegios elevados, se denota con s. Se pueden activar estos bits utilizando \verb|chmod u<+/->s <archivo>| y \verb|chmod g<+/->s <archivo>|. Todos los usuarios contaran con un id y podrán pertenecer a varios grupos de usuarios, los grupos también contaran con ids.
 
-A veces queremos ejecutar un proceso con mayores privilegios. Por ejemplo para cambiar la contraseña de mi usuario. Queremos ejecutar con los privilegios de root, es decir, del owner del programa. Notar que esta no es una forma de transformar al usuario en root (esto sería un obvio problema de seguridad), sino que sólo estoy ejecutando un programa de root, como root. En definitiva, un proceso tiene dos tipos de uid: el uid del usuario que ejecuta un proceso (uid real) y uid del owner del archivo (uid efectivo). Análogamente para los grupos existe gid real y gid efectivo.
+En los casos en que necesitemos ejecutar un proceso con mayores privilegios, por ejemplo para cambiar la contraseña de un usuario, necesitaremos ejecutar con los privilegios de root, es decir, del owner del programa. Notar que esta no es una forma de transformar al usuario en root (esto sería un obvio problema de seguridad), sino que sólo se está ejecutando un programa de root, como root. En definitiva, un proceso tiene dos tipos de uid: el uid del usuario que ejecuta un proceso (uid real) y uid del owner del archivo (uid efectivo). Análogamente para los grupos existe gid real y gid efectivo.
 
 \subsection{Ataques comunes}
 
@@ -1421,9 +1447,7 @@ En la siguiente sección hablaremos de ataques comunes realizados a protocolos d
 \subsubsection{Buffer overflow}
 
 
-Se podría generar overflow en un buffer en stack de una función para cambiar sectores prohibidos de la memoria. Típicamente se usa para cambiar el IP (instruction pointer), que está escrito en la base del stack, también se puede hacer con el heap, llenándolo hasta pisar el IP. La idea es apuntar el IP a una dirección que hayamos llenado del stack con un programa malicioso, de forma tal que al hacer un return el sistema comience a correr esa porción del código utilizando los permisos del programa que estaba corriendo antes
-
-Para evitarlo se pueden hacer chequeos de límites en los accesos a las estructuras de datos (esto es lo que hacen, por ejemplo, Java o C\#), o chequear que no se esté accediendo a sectores prohibidos del stack.
+Se podría generar overflow en un buffer en stack de una función para cambiar sectores prohibidos de la memoria. Típicamente se usa para cambiar el IP (instruction pointer), que está escrito en la base del stack, también se puede hacer con el heap, llenándolo hasta pisar el IP. La idea es apuntar el IP a una dirección que hayamos llenado del stack con un programa malicioso, de forma tal que al hacer un return el sistema comience a correr esa porción del código utilizando los permisos del programa que estaba corriendo antes. Para evitarlo se pueden hacer chequeos de límites en los accesos a las estructuras de datos (esto es lo que hacen, por ejemplo, Java o C\#), o chequear que no se esté accediendo a sectores prohibidos del stack.
 
 \subsubsection{Control de parámetros}
 
@@ -1448,7 +1472,7 @@ O malware, es software diseñado para llevar a cabo acciones no deseadas y sin e
 
 Las principales vías de infección incluyen: descargas desde páginas web (a veces involuntariamente), adjuntos por email, vulnerabilidades en software, compartir dispositivos de almacenamiento, otros protocolos y aplicaciones de Internet: chat, P2P, redes sociales, etc. Las formas de prevenir estas infecciones es la utilización de antivirus actualizado, recibir las actualizaciones de seguridad debidas para el sistema operativo utilizado, y el uso del sentido común. Sin embargo, aun así en grandes organizaciones siempre hay personas que van a terminar cayendo en estos ataques, y dada la complejidad de una organización, un eslabón pone en peligro la totalidad de la misma. Por eso los administradores de sistemas requieren a soluciones como generadores de claves físicas (o llaves usb) que en conjunto con la contraseña son requeridas para acceder a una cuenta corporativa. Estas claves son la solución definitiva contra ataques de phishing, ya que requieren que la persona inserte físicamente la misma para acceder a una cuenta.
 
-Otras políticas de prevención consisten en denegar la instalación de programas no aprobados por los administradores, sistemas de firewall que deniegan el acceso a sitios previamente aprobados, políticas de acceso a la red interna del trabajo y encriptación de las entradas externas (utilizando VPNs) y registro de las operaciones de cada usuario a recursos compartidos, con tal de poder un análisis pertinente si algo ocurre.
+Otras políticas de prevención consisten en denegar la instalación de programas no aprobados por los administradores, sistemas de firewall que deniegan el acceso a sitios previamente aprobados, políticas de acceso a la red interna del trabajo, encriptación de sesiones remotas (utilizando VPNs) y registro de las operaciones de cada usuario a recursos compartidos, con tal de poder un análisis pertinente si algo ocurre.
 
 Dentro de desarrollo muchas veces se suele utilizar sandboxing, que es básicamente un mecanismo que provee el SO para aislar procesos, en el caso de linux provee chroot. También suele utilizarse virtualización para tener un sistema totalmente aislado pero con la misma funcionalidad que un sistema operativo completo, en donde se pueden probar diferente tipo de cosas sin riesgo alguno.
 
@@ -1481,7 +1505,7 @@ Existen tres conceptos que son similares pero no iguales:
 \begin{itemize}
 \item C\'omputo simult\'aneo (o concurrente): Un scheduler asigna un quantum a cada proceso. Los procesos se ejecutan en una misma CPU de forma concurrente.
 \item C\'omputo paralelo: M\'as de una CPU en una misma m\'aquina ejecutando procesos al mismo tiempo. Se suelen compartir el scheduler, clock y memoria en estos tipos de sistemas.
-\item C\'omputo distribuido: Varias CPUs ejecutando procesos al mismo tiempo en distintas maquinas, que no comparten fisicamente memoria, clock, etc. Sin embargo en algunos casos la memoria puede ser compartida mediante el modelo de comunacion Linda y el scheduler y clock mediante TTA (Time Triggered Architecture).
+\item C\'omputo distribuido: Varias CPUs ejecutando procesos al mismo tiempo en distintas maquinas, que no comparten fisicamente memoria, clock, etc. Sin embargo en algunos casos la memoria puede ser compartida mediante el modelo de comunicacion Linda y el scheduler y clock mediante TTA (Time Triggered Architecture).
 \end{itemize}
 
 Las ventajas de tener sistemas distribuidos van desde aprovechar el uso de procesadores en maquinas distintas con el fin de reducir el tiempo de procesamiento; la tolerancia a fallas por la posibilidad de tener replicacion de datos entre maquinas, hasta a veces, en distintas ubicaciones geograficas; y la escalabilidad del sistema, que permite automaticamente contar con mayor cantidad de espacio y poder de computo agregando mas maquinas. Sin embargo, entre las desventajas podremos encontrar la necesidad de lidiar con sincronizacion de procesos, la consistencia de datos y la informacion parcial.
@@ -1495,6 +1519,10 @@ Cuando creamos un sistema distribuido existen limitaciones reales que no permite
 
 \subsection{Información parcial}
 Una máquina no puede saber todo lo que sucede en el sistema, por lo que se suele dividir el trabajo aplicando paralelismo de datos o paralelismo de tareas. En el paralelismo de datos se aplica el mismo proceso a diferentes datos, por ejemplo paralelizar una multipliacion matricial, mientras que en el paralelismo de tareas se paralelizan distintas tareas, por ejemplo procesando los frames de un video para transmitirlo de forma eficiente via streaming.
+
+\subsection{Sistema de archivos}
+
+El sistema de archivos de un sistema distribuido debe poder operar de modo tal que la ubicación física de los archivos sea transparente. Este sistema es el responsable de varias de las ventajas de los sistemas distribuidos como la escalabilidad; que permite almacenar una enorme cantidad de datos, dividiéndolos sobre los discos de muchas máquinas; y la torelancia a fallas; que para asegurarla se suelen implementar replicación y migración. Algunos ejemplos son Hadoop Distributed File System (HDFS) y Red Hat Cluster Storage.
 
 \subsection{Comunicacion y Sincronizacion}
 Cuando se tiene un sistema distribuido surge la necesidad de sincronizar varias de sus partes, sea bien para realizar un trabajo en conjunto o para comunicar distintas partes de informacion entre los distintos componentes de un sistema.
@@ -1510,7 +1538,7 @@ Normalmente en los sistemas paralelos se utiliza la memoria para realizar sincro
     \label{fig:numa_uma}
 \end{figure}
 
-Otro modelo utilizado es llamado NUMA (Non-Uniform Memory Access), en donde cada procesador tiene asignada una memoria particular, que puede ser accedida en forma paralela por cada procesador, y una red de interconexion que conecta a los distintos pares de CPU para permitir sincronizacion y consistencia. Este modelo genera que haya areas mas rapidas de acceder que otras para un procesador dado. El mismo es normalmente utilizado con el L1 cache que cada CPU trae asignado, pero tambien puede ser visto en sistemas distribuidos, si consideramos a cada ``CPU'' como una computadora entera.
+Otro modelo utilizado es llamado NUMA (Non-Uniform Memory Access), en donde cada procesador tiene asignada una memoria particular, que puede ser accedida en forma paralela por cada procesador, y una red de interconexion que conecta a los distintos pares de CPU para permitir sincronizacion y consistencia. Este modelo genera que haya areas mas rapidas de acceder que otras para un procesador dado. El mismo es normalmente utilizado con el L1 cache que cada CPU trae asignado, pero tambien puede ser visto en sistemas distribuidos, si consideramos a cada procesador como una computadora entera.
 
 Por otro lado a nivel software tendremos modelos asociativos estructurados (dado un valor, indican la posicion) y no estructurados, como la memoria virtual global.
 
@@ -1524,10 +1552,6 @@ Por otro lado tendremos RPCs asincronicos, en donde la respuesta no esta asegura
 
 Tambien existen los sistemas send/receive, que tambien son catalogados como asincronicos. Entre los mismos tendremos el mailbox, pipes no bloqueantes, MPI para C y C++ y Scala actors receive/react.
 
-\subsection{Sistema de archivos}
-
-El sistema de archivos de un sistema distribuido debe poder operar de modo tal que la ubicación física de los archivos sea transparente. Este sistema es el responsable de varias de las ventajas de los sistemas distribuidos como la escalabilidad; que permite almacenar una enorme cantidad de datos, dividiéndolos sobre los discos de muchas máquinas; y la torelancia a fallas; que para asegurarla se suelen implementar replicación y migración. Algunos ejemplos son Hadoop Distributed File System (HDFS) y Red Hat Cluster Storage.
-
 \subsection{Scheduling}
 
 En sistemas distribuidos que comparten procesos entre maquinas y poseen un sistema de scheduling distribuido el mismo se da en dos niveles: local y global. En el \textbf{scheduling local} se le otorga al procesador un proceso ready, esto pasa siempre, en cada round. En el \textbf{scheduling global} se le asigna un proceso a un procesador (mapping).
@@ -1538,30 +1562,106 @@ A la vez la migración puede ser de dos tipos: \textbf{sender initiated} en dond
 
 En definitiva, la migración es una parte importante de la política de scheduling en sistemas paralelos, y abre otras preguntas: ¿Cuándo hay que migrar un proceso? ¿Qué proceso hay que migrar? ¿A dónde hay que migrarlo? ¿Cómo se difunde el estado?.
 
-\subsection{Comunicacion de mensajes}
+\subsection{Comunicacion utilizando memoria compartida}
 
-\subsubsection{Propiedades}
+Hay una parte de esto (variables RW) vista en un capitulo anterior. TODO: Falta agregar explicacion de consenso, definiciones de numero de consenso, demo de numero de consenso para registro atomico, cola-pilas y TAS. Hay que relacionar consenso con el modelo de computo distribuido, ya que como aparece en la bibliografia solo hace referencia a computo paralelo.
 
-Requerimientos para una solución de exclusión mutua en sistemas distribuidos:
-[EXCL] Exclusión mutua: el recurso sólo lo puede tener un proceso a la vez.
-Fairness: las solicitudes de uso deben ser cumplidas en el orden en que fueron hechas.
-[LOCK-FREE] Lock-free: el recurso es concedido eventualmente (luego de tiempo finito) a alguno de los procesos que lo solicitó.
-[WAIT-FREE] Wait-free: todo proceso que solicita el recurso lo recibe eventualmente.
-[G-PROG] Progreso global dependiente: si todo proceso que recibe el recurso lo libera eventualmente, entonces todo proceso que solicita el recurso lo recibe eventualmente.
+\subsection{Comunicacion utilizando envio de mensajes}
+En algunas ocasiones, no existira la posibilidad de tener una memoria centralizada sobre la cual se puedan comunicar todos los procesos. Por lo cual tendremos que lograr una sincronización de procesos en un sistema distribuido, usando únicamente envío de mensajes. Existen algunas soluciones que tratan con este problema y funcionan bajo ciertas condiciones.
 
+\subsubsection{Algoritmo de Lamport para ordenar eventos}
+
+Tenemos eventos que ocurren en distintos nodos de un sistema distribuido. Queremos que haya cierto orden entre ellos, para que los nodos usen este orden para sincronizar sus acciones. Para ordenar eventos podremos asignar timestamps que reflejen el orden en que ocurrieron esos eventos. No queremos un reloj global, porque ello implicaría tener un nodo central dedicado a coordinarlo. La idea es que cada máquina le asocie un timestamp propio a cada evento que ocurra en el sistema, pero los timestamps que asignan dos procesos distintos no tienen que ser exactamente iguales, aunque mantienen cierta relación. A Lamport lo único que le importa es poder hablar del orden de los eventos en los que seguro podemos ponernos de acuerdo sobre su orden cronológico. Esto es útil en algunos algoritmos que resuelven sección crítica para sistemas distribuidos.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{imgs/message_ordering_lamport.png}
+    \caption{Ordenamiento de mensajes con el algoritmo de Lamport.}
+    \label{fig:message_ordering_lamport}
+\end{figure}
+
+Por ejemplo, en este caso seguro que D ocurre antes que E. También A ocurre antes que F, porque el mensaje C es la recepción de A, y C viene antes que F. Sin embargo, no sabemos si B ocurre antes que C o si C ocurre antes que B (aunque la imágen haga parecer que B ocurrió antes). No hay ningún evento que me permita comparar B y C. En este caso, decimos que B y C son concurrentes.
+
+\subsubsection{Definicion formal}
+
+Se busca que se cumplan dos cosas:
 
 \begin{itemize}
- \item Exclusion mutua (EXCL): el recurso solo puede ser utilizado por un proceso a la vez.
- \item Progreso (PROG/lock-free):
- \item Progreso global absoluto (wait-free)
- \item Progreso global dependiente (G-PROG/starvation-free)
- \item Justicia (FAIR/fairness)
+ \item Si $a$ y $b$ ocurren en $i$ y $a \rightarrow b$, entonces $C_i(a) < C_i(b)$.
+ \item Si $e = snd_i(m, _)$ y $r = rcv_j(m, _)$, entonces $C_i(e) < C_j(r)$.
 \end{itemize}
 
-(wait-free es tambien lock-free)
+En donde:
+
+\begin{itemize}
+ \item $a \rightarrow b$ sii el evento a ocurre antes que el evento $b$.
+ \item $C_i(e) = t$ donde $t$ es el timestamp que el proceso $i$ le asigna al evento $e$.
+ \item $snd_i(m, t) = e$ donde $e$ es el evento en donde el proceso $i$ envía el mensaje $m$ y su timestamp actual $t$.
+ \item $rcv_i(m, t) = e$ donde $e$ es el evento en donde el proceso $i$ recibe el mensaje $m$ y su timestamp actual $t$.
+\end{itemize}
+
+\subsubsection{Algoritmo}
+\begin{itemize}
+ \item $i$ incrementa $C_i$ entre todo par de eventos consecutivos.
+ \item $i$ envia: $e = snd_i(m, t_i)$ con $C_i(e) = t_i$.
+ \item $j$ recibe: $r = rcv_j(m, t_i)$, asignando $C_j(r) = t_j$ actualizando $t_j = max(t_j, t_i)$.
+\end{itemize}
+
+\subsection{Exclusion mutua con envio de mensajes}
+
+Estos algoritmos solo funcionan si no se pierden mensajes y ningun proceso falla.
+
+\subsubsection{Enfoque centralizado}
+Designaremos el control de los recursos en un único nodo, que hace de coordinador. En el coordinador hay procesos que ofician de proxies de los procesos remotos. Cuando un proceso necesita un recurso, se lo pide a su proxy, quien a su vez se lo pide al coordinador. Este enfoque presenta algunos problemas: el coordinador es un cuello de botella en procesamiento y capacidad de la red y si falla el coordinador, se cae el sistema.
+
+\subsubsection{Token passing}
+Se arma un anillo lógico de procesos y pongo a circular un único token. Cuando quiero entrar en la sección crítica espero a que me llegue el token. La desventaja de este sistema es que habra muchos mensajes circulando, aún cuando no son necesarios (cuando alguien no necesita entrar en la sección crítica pero igual recibe el token y debe mandarlo al siguiente proceso).
+
+\subsubsection{Lamport}
+Si, Lamport de nuevo. Cada proceso mantiene una cola de eventos, ordenados por el timestamp de Lamport. Cada vez que pusheo un evento en la cola, \textbf{lo hago ordenadamente}, según el timestamp.
+
+~
+
+Solicitando entrar en la sección crítica:
+\begin{enumerate}
+ \item Pusheo mi solicitud REQ en mi propia cola.
+ \item Mando REQ a todos los procesos, con mi timestamp.
+ \item Espero ACK de todos los procesos (los guardo pero no en la cola).
+ \item Si REQ está a la cabeza de mi cola, y ya recibí todas las respuestas, entro en la sección crítica.
+ \item Cuando salgo, popear REQ de la cola, y mandar un mensaje de salida REL a todos los procesos.
+\end{enumerate}
+
+~
+
+Otros procesos:
+\begin{enumerate}
+ \item Cuando recibo REQ, lo pusheo. Respondo ACK.
+ \item Cuando recibo REL, popeo REQ de mi cola.
+ \item Si yo había mandado solicitud, vuelvo al paso 3 del algoritmo de arriba.
+\end{enumerate}
+
+\subsection{Eleccion de líder}
+Una serie de procesos debe elegir un líder para realizar cierta tarea, supongamos que los mensajes no se pierden y los procesos no fallan. Primero organizamos los procesos en forma de anillo, luego cada proceso en el anillo se comporta de la siguiente manera:
+
+\begin{itemize}
+ \item Organizamos los procesos en un anillo, y cada proceso hace circular su pid.
+ \item Cuando a un proceso le llega un mensaje, comapra ese pid contra el suyo y hace circular el mayor.
+ \item Cuando un proceso dectecta que su mensaje dio toda la vuelta con su pid, se autoclama como lider y notifica al resto de los nodos haciendo circular un mensaje.
+\end{itemize}
+
+Este algoritmo presenta complicaciones en el caso que las condiciones no se cumplan, es decir cuando tenemos nodos que fallan y pueden llegar a no recibir los mensajes.
 
 
+\subsection{2PC (Two Phase Commit)}
 
+Queremos realizar una transacción en todos los nodos, pero todos los nodos tienen queestar de acuerdo si se hizo o no se hizo.
+
+\begin{itemize}
+ \item Primera fase: Un proceso coordinador envía un mensaje a cada proceso preguntando si la transacción fue satisfactoria o no y espera las respuestas de todos los procesos.
+ \item Segunda fase: La transacción se considera exitosa si todos los procesos responden que fue exitosa. El resultado se informa a todos los procesos para que puedan commitear o abortar la transacción.
+\end{itemize}
+
+Nuevamente si los procesos fallan o los mensajes se pierden tendremos el problema del consenso Bizantino, para el cual no existe algoritmo que lo resuelva. Sin embargo, podremos realizar Two Phase commit con terminacion debil bajo estas condiciones, es decir, si no hay fallas, todo proceso decide. De lo contrario, puede que algun proceso no forme parte de la decision. Esta condicion no es del todo confiable, por lo que se puede utilizare Three Phase Commit para asegurar la terminacion fuerte: todo proceso que no falla decide.
 
 \end{document}
 
