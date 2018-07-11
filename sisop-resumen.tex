@@ -1400,6 +1400,12 @@ Los algoritmos de encriptación asimétricos usan claves distintas. Una de ellas
 \item \textbf{¿Cómo desencripto?} Para cada letra encriptada $c$ calculo el resto de dividir $c^d$ por $n$.
 \end{itemize}
 
+\newpage
+
+$$k(x_1, x_2) = \sigma^2e^{-1/2l^2}e^{d(x_1, x_2)} = e^{log(\sigma^2) - 1/2l^2 + d(x_1, x_2)}$$
+
+\newpage
+
 Por otro lado, tendremos la \textbf{firma digital con RSA} que se utiliza para asegurarme que un documento es auténtico (que nadie lo cambió). Para obtener una firma digital se calcula el hash del documento que se esta firmando, y se encripta este hash con la clave privada de la entidad que lo firma, luego la firma digital se agrega al documento original. El receptor lo desencripta con la clave pública de la entidad (confiando que la clave pública es efectivamente esa), y si lo puede desencriptar exitosamente, entonces el dueño de la clave pública es efectivamente el autor del documento. Luego, verifica que el hash obtenido de la desencripción se corresponda con el del documento para asegurarse que no se haya alterado.
 
 \subsubsection{Autenticación remota con hash}
@@ -1567,7 +1573,7 @@ En definitiva, la migración es una parte importante de la política de scheduli
 Hay una parte de esto (variables RW) vista en un capitulo anterior. TODO: Falta agregar explicacion de consenso, definiciones de numero de consenso, demo de numero de consenso para registro atomico, cola-pilas y TAS. Hay que relacionar consenso con el modelo de computo distribuido, ya que como aparece en la bibliografia solo hace referencia a computo paralelo.
 
 \subsection{Comunicacion utilizando envio de mensajes}
-En algunas ocasiones, no existira la posibilidad de tener una memoria centralizada sobre la cual se puedan comunicar todos los procesos. Por lo cual tendremos que lograr una sincronización de procesos en un sistema distribuido, usando únicamente envío de mensajes. Existen algunas soluciones que tratan con este problema y funcionan bajo ciertas condiciones.
+En algunas ocasiones, no existira la posibilidad de tener una memoria centralizada sobre la cual se puedan comunicar todos los procesos. Por lo cual tendremos que lograr una sincronización de procesos en un sistema distribuido, usando únicamente envío de mensajes.
 
 \subsubsection{Algoritmo de Lamport para ordenar eventos}
 
